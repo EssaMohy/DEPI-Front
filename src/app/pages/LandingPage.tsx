@@ -10,17 +10,41 @@ import { Footer } from "../components/landing/Footer";
 
 export function LandingPage() {
   const [showDemo, setShowDemo] = useState(false);
+
   const openDemo = () => setShowDemo(true);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div
+      className="
+      min-h-screen 
+      bg-white
+      scroll-smooth
+      "
+    >
       <Navbar />
-      <Hero onWatchDemo={openDemo} />
-      <Features />
-      <HowItWorks />
-      <Gallery />
-      <CTA onWatchDemo={openDemo} />
+
+      <section id="home">
+        <Hero onWatchDemo={openDemo} />
+      </section>
+
+      <section id="features">
+        <Features />
+      </section>
+
+      <section id="how-it-works">
+        <HowItWorks />
+      </section>
+
+      <section id="gallery">
+        <Gallery />
+      </section>
+
+      <section id="join-us">
+        <CTA onWatchDemo={openDemo} />
+      </section>
+
       <Footer />
+
       {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
     </div>
   );
