@@ -190,7 +190,7 @@ export default function DiseaseDetailsPage() {
           space-y-3
           "
           >
-            {disease.treatment.steps.map((step: string, index: number) => (
+            {(disease.treatment?.steps ?? []).map((step: string, index: number) => (
               <li
                 key={index}
                 className="

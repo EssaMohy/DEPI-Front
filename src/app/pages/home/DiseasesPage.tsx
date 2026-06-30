@@ -14,6 +14,16 @@ export default function DiseasesPage() {
       symptoms: "Brown or black spots on leaves",
       description:
         "A common plant disease that causes spots and damage on leaves.",
+      causes:
+        "Caused by fungal or bacterial pathogens that thrive in humid, wet conditions.",
+      treatment: {
+        steps: [
+          "Remove and destroy affected leaves",
+          "Avoid overhead watering to keep foliage dry",
+          "Apply a suitable fungicide or bactericide",
+          "Improve air circulation around the plant",
+        ],
+      },
       imageUrl:
         "https://images.unsplash.com/photo-1592982537447-6f2a6a0d9b8f?w=600",
     },
@@ -25,6 +35,16 @@ export default function DiseasesPage() {
       type: "Nutrient deficiency",
       symptoms: "Distorted leaves and weak growth",
       description: "A nutrient problem affecting plant development.",
+      causes:
+        "Insufficient calcium uptake due to poor soil quality, low pH, or inconsistent watering.",
+      treatment: {
+        steps: [
+          "Test and amend soil with calcium-rich amendments",
+          "Maintain consistent, even watering",
+          "Apply a balanced fertilizer with calcium",
+          "Avoid excess nitrogen, which can block calcium uptake",
+        ],
+      },
       imageUrl:
         "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600",
     },
@@ -36,6 +56,16 @@ export default function DiseasesPage() {
       type: "Environmental stress",
       symptoms: "Brown crispy edges and dry leaves",
       description: "Damage caused by heat and sunlight stress.",
+      causes:
+        "Excessive direct sunlight, heat, or insufficient watering during hot periods.",
+      treatment: {
+        steps: [
+          "Move the plant to a spot with filtered or indirect light",
+          "Increase watering frequency during hot weather",
+          "Trim away severely scorched leaves",
+          "Provide shade during peak afternoon sun",
+        ],
+      },
       imageUrl:
         "https://images.unsplash.com/photo-1497250681960-ef046c08a56e?w=600",
     },
@@ -47,6 +77,16 @@ export default function DiseasesPage() {
       type: "Fungal disease",
       symptoms: "Large brown patches on leaves",
       description: "A serious disease affecting plant health.",
+      causes:
+        "Fungal infection spread by spores, often worsened by wet foliage and poor air flow.",
+      treatment: {
+        steps: [
+          "Remove and dispose of infected leaves immediately",
+          "Apply an appropriate fungicide",
+          "Water at the base to keep leaves dry",
+          "Space plants to improve airflow",
+        ],
+      },
       imageUrl:
         "https://images.unsplash.com/photo-1593691509543-c55fb32e5cee?w=600",
     },
