@@ -25,6 +25,7 @@ import SettingsPage from "./pages/SettingsPage";
 import CareHistoryPage from "./pages/CareHistoryPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import DiseaseDetailsPage from "./pages/DiseaseDetailsPage";
+import EditProfilePage from "./pages/home/EditProfilePage";
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
             <Route path="/articles/details" element={<ArticleDetailsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/diseases/details" element={<DiseaseDetailsPage />} />
+            <Route path="/profile/edit" element={<EditProfilePage />} />
           </Route>
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/care-history" element={<CareHistoryPage />} />

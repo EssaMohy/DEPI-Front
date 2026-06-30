@@ -307,7 +307,11 @@ gap-5
                 text={disease.causes}
               />
 
-              <CareCard icon={<Tag />} title="Type" text={disease.type} />
+              <CareCard
+                icon={<Tag />}
+                title="Type"
+                text={disease.type}
+              />
 
               <CareCard
                 icon={<Bug />}

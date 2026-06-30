@@ -126,6 +126,7 @@ font-semibold
             </div>
 
             <button
+              onClick={() => navigate("/profile/edit")}
               className="
 flex
 items-center
