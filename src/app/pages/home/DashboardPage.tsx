@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PlantDashboard } from "../components/PlantDashboard";
-import { AddPlantModal } from "../components/AddPlantModal";
-import { DiagnosisModal } from "../components/DiagnosisModal";
-import { usePlants } from "../context/PlantContext";
+import { PlantDashboard } from "../../components/PlantDashboard";
+import { AddPlantModal } from "../../components/AddPlantModal";
+import { DiagnosisModal } from "../../components/DiagnosisModal";
+import { usePlants } from "../../context/PlantContext";
 
 export function DashboardPage() {
   const navigate = useNavigate();

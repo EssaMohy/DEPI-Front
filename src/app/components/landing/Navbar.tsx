@@ -27,6 +27,12 @@ export function Navbar() {
             >
               How It Works
             </a>
+            <a
+              href="#join-us"
+              className="text-gray-600 hover:text-emerald-600 transition-colors"
+            >
+              Join Us
+            </a>
           </div>
           <button
             onClick={() => navigate("/dashboard")}

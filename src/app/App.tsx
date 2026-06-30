@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PlantProvider } from "./context/PlantContext";
 
 import { LandingPage } from "./pages/LandingPage";
-import { DashboardPage } from "./pages/DashboardPage";
+import { DashboardPage } from "./pages/home/DashboardPage";
 
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
@@ -11,6 +11,16 @@ import VerifyOtpPage from "./pages/auth/VerifyOtpPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import AuthSuccessPage from "./pages/auth/AuthSuccessPage";
 
+import MainLayout from "./pages/home/MainLayout";
+
+import CommunityPage from "./pages/home/CommunityPage";
+import ArticlesPage from "./pages/ArticlesPage";
+import ArticleDetailsPage from "./pages/ArticleDetailsPage";
+import PlantsPage from "./pages/home/PlantsPage";
+import PlantDetailsPage from "./pages/PlantDetailsPage";
+import DiseasesPage from "./pages/home/DiseasesPage";
+import ProfilePage from "./pages/home/ProfilePage";
+
 export default function App() {
   return (
     <PlantProvider>
@@ -18,7 +28,6 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
 
           {/* Auth */}
           <Route path="/auth/login" element={<LoginPage />} />
@@ -30,6 +39,18 @@ export default function App() {
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
+
+          {/*home */}
+          <Route element={<MainLayout />}>
+            <Route path="/community" element={<CommunityPage />} />
+            <Route path="/articles" element={<ArticlesPage />} />
+            <Route path="/plants" element={<PlantsPage />} />
+            <Route path="/diseases" element={<DiseasesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/plants/details" element={<PlantDetailsPage />} />
+            <Route path="/articles/details" element={<ArticleDetailsPage />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </PlantProvider>

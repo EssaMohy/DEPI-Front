@@ -1,46 +1,83 @@
-import { useState } from 'react';
-import { X, Search } from 'lucide-react';
-import { Plant } from './PlantDashboard';
+import { useState } from "react";
+import { X, Search } from "lucide-react";
+import { Plant } from "./PlantDashboard";
 
 interface AddPlantModalProps {
   onClose: () => void;
-  onAdd: (plant: Omit<Plant, 'id'>) => void;
+  onAdd: (plant: Omit<Plant, "id">) => void;
 }
 
 const commonPlants = [
-  { name: 'Monstera', species: 'Monstera Deliciosa', wateringDays: 7, image: 'https://images.unsplash.com/photo-1775598369836-74f2e6c51095?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400' },
-  { name: 'Snake Plant', species: 'Sansevieria Trifasciata', wateringDays: 14, image: 'https://images.unsplash.com/photo-1769653907239-c8f1a1843b08?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400' },
-  { name: 'Pothos', species: 'Epipremnum Aureum', wateringDays: 7, image: 'https://images.unsplash.com/photo-1777383504353-77974872c2ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400' },
-  { name: 'Peace Lily', species: 'Spathiphyllum', wateringDays: 5, image: 'https://images.unsplash.com/photo-1735973634121-d93cf7c94b44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400' },
-  { name: 'Succulent', species: 'Various Species', wateringDays: 21, image: 'https://images.unsplash.com/photo-1772907952251-09e722aafa6a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400' },
-  { name: 'Fern', species: 'Nephrolepis', wateringDays: 3, image: 'https://images.unsplash.com/photo-1772907952266-3a7981f3f234?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400' },
+  {
+    name: "Monstera",
+    species: "Monstera Deliciosa",
+    wateringDays: 7,
+    image:
+      "https://images.unsplash.com/photo-1775598369836-74f2e6c51095?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
+  },
+  {
+    name: "Snake Plant",
+    species: "Sansevieria Trifasciata",
+    wateringDays: 14,
+    image:
+      "https://images.unsplash.com/photo-1769653907239-c8f1a1843b08?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
+  },
+  {
+    name: "Pothos",
+    species: "Epipremnum Aureum",
+    wateringDays: 7,
+    image:
+      "https://images.unsplash.com/photo-1777383504353-77974872c2ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
+  },
+  {
+    name: "Peace Lily",
+    species: "Spathiphyllum",
+    wateringDays: 5,
+    image:
+      "https://images.unsplash.com/photo-1735973634121-d93cf7c94b44?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
+  },
+  {
+    name: "Succulent",
+    species: "Various Species",
+    wateringDays: 21,
+    image:
+      "https://images.unsplash.com/photo-1772907952251-09e722aafa6a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
+  },
+  {
+    name: "Fern",
+    species: "Nephrolepis",
+    wateringDays: 3,
+    image:
+      "https://images.unsplash.com/photo-1772907952266-3a7981f3f234?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
+  },
 ];
 
 export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [customMode, setCustomMode] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    species: '',
+    name: "",
+    species: "",
     wateringFrequency: 7,
-    notes: '',
-    image: ''
+    notes: "",
+    image: "",
   });
 
-  const filteredPlants = commonPlants.filter(plant =>
-    plant.name.toLowerCase().includes(search.toLowerCase()) ||
-    plant.species.toLowerCase().includes(search.toLowerCase())
+  const filteredPlants = commonPlants.filter(
+    (plant) =>
+      plant.name.toLowerCase().includes(search.toLowerCase()) ||
+      plant.species.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleQuickAdd = (plant: typeof commonPlants[0]) => {
+  const handleQuickAdd = (plant: (typeof commonPlants)[0]) => {
     onAdd({
       name: plant.name,
       species: plant.species,
       image: plant.image,
       lastWatered: new Date(),
       wateringFrequency: plant.wateringDays,
-      health: 'good',
-      notes: ''
+      health: "good",
+      notes: "",
     });
     onClose();
   };
@@ -50,11 +87,13 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
     onAdd({
       name: formData.name,
       species: formData.species,
-      image: formData.image || 'https://images.unsplash.com/photo-1772795786893-62866eb17226?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400',
+      image:
+        formData.image ||
+        "https://images.unsplash.com/photo-1772795786893-62866eb17226?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400",
       lastWatered: new Date(),
       wateringFrequency: formData.wateringFrequency,
-      health: 'good',
-      notes: formData.notes
+      health: "good",
+      notes: formData.notes,
     });
     onClose();
   };
@@ -78,8 +117,8 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
               onClick={() => setCustomMode(false)}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                 !customMode
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               Quick Add
@@ -88,8 +127,8 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
               onClick={() => setCustomMode(true)}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
                 customMode
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               Custom Plant
@@ -117,11 +156,21 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
                     className="text-left bg-gray-50 rounded-xl p-4 hover:bg-emerald-50 hover:border-emerald-500 border-2 border-transparent transition-all"
                   >
                     <div className="aspect-square bg-gray-200 rounded-lg mb-3 overflow-hidden">
-                      <img src={plant.image} alt={plant.name} className="w-full h-full object-cover" />
+                      <img
+                        src={plant.image}
+                        alt={plant.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{plant.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{plant.species}</p>
-                    <p className="text-xs text-emerald-600">Water every {plant.wateringDays} days</p>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      {plant.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {plant.species}
+                    </p>
+                    <p className="text-xs text-emerald-600">
+                      Water every {plant.wateringDays} days
+                    </p>
                   </button>
                 ))}
               </div>
@@ -136,7 +185,9 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="e.g., My Monstera"
                 />
@@ -150,7 +201,9 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
                   type="text"
                   required
                   value={formData.species}
-                  onChange={(e) => setFormData({ ...formData, species: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, species: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="e.g., Monstera Deliciosa"
                 />
@@ -166,7 +219,12 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
                   min="1"
                   max="365"
                   value={formData.wateringFrequency}
-                  onChange={(e) => setFormData({ ...formData, wateringFrequency: parseInt(e.target.value) })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      wateringFrequency: parseInt(e.target.value),
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -178,7 +236,9 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
                 <input
                   type="url"
                   value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, image: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="https://..."
                 />
@@ -190,7 +250,9 @@ export function AddPlantModal({ onClose, onAdd }: AddPlantModalProps) {
                 </label>
                 <textarea
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   rows={3}
                   placeholder="Care instructions, location, etc."
