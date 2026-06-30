@@ -23,6 +23,7 @@ import ProfilePage from "./pages/home/ProfilePage";
 
 import SettingsPage from "./pages/SettingsPage";
 import CareHistoryPage from "./pages/CareHistoryPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/plants/details" element={<PlantDetailsPage />} />
             <Route path="/articles/details" element={<ArticleDetailsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
           </Route>
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/care-history" element={<CareHistoryPage />} />
