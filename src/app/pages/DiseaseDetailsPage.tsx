@@ -1,280 +1,449 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bug, Stethoscope, AlertCircle, Sprout } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  ArrowLeft,
+  Bug,
+  Stethoscope,
+  AlertCircle,
+  Sprout,
+  Tag,
+} from "lucide-react";
 
 export default function DiseaseDetailsPage() {
-  const location = useLocation();
   const navigate = useNavigate();
 
-  const disease = location.state?.disease;
+  const { state } = useLocation();
 
-  if (!disease) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold">Disease not found</h2>
+  const disease = state?.disease || {
+    name: "Leaf Spot",
 
-        <button
-          onClick={() => navigate("/diseases")}
-          className="
-          mt-5
-          px-5
-          py-2
-          rounded-xl
-          bg-emerald-600
-          text-white
-          "
-        >
-          Back
-        </button>
-      </div>
-    );
-  }
+    otherNames: "Leaf Spot Disease, Fungal Leaf Spots",
 
-  return (
-    <div className="space-y-8">
-      {/* Back */}
+    type: "Fungal / Bacterial disease",
 
-      <button
-        onClick={() => navigate(-1)}
-        className="
-        flex
-        items-center
-        gap-2
-        text-emerald-700
-        font-semibold
-        "
-      >
-        <ArrowLeft size={20} />
-        Back
-      </button>
+    symptoms: "Brown or black spots on leaves",
 
-      {/* Hero */}
+    description:
+      "A common plant disease that causes spots and damage on leaves.",
 
-      <div
-        className="
-      bg-gradient-to-r
-      from-emerald-600
-      to-green-500
-      rounded-3xl
-      overflow-hidden
-      text-white
-      "
-      >
-        <div className="h-96">
-          {disease.imageUrl ? (
-            <img
-              src={disease.imageUrl}
-              className="
-              w-full
-              h-full
-              object-cover
-              "
-            />
-          ) : (
-            <div
-              className="
-            h-full
-            flex
-            items-center
-            justify-center
-            "
-            >
-              <Bug size={120} />
-            </div>
-          )}
-        </div>
+    causes:
+      "Caused by fungal or bacterial pathogens that thrive in humid, wet conditions.",
 
-        <div className="p-8">
-          <span
-            className="
-          bg-white/20
-          px-4
-          py-2
-          rounded-full
-          text-sm
-          font-semibold
-          "
-          >
-            {disease.type}
-          </span>
+    treatment: {
+      steps: [
+        "Remove and destroy affected leaves",
+        "Avoid overhead watering to keep foliage dry",
+        "Apply a suitable fungicide or bactericide",
+        "Improve air circulation around the plant",
+      ],
+    },
 
-          <h1
-            className="
-          text-4xl
-          font-bold
-          mt-5
-          "
-          >
-            {disease.name}
-          </h1>
+    imageUrl:
+      "https://images.unsplash.com/photo-1592982537447-6f2a6a0d9b8f?w=600",
+  };
 
-          <p
-            className="
-          opacity-90
-          mt-3
-          text-lg
-          "
-          >
-            {disease.description}
-          </p>
-        </div>
-      </div>
+  const treatmentSteps = disease.treatment?.steps ?? [];
 
-      {/* Details */}
-
-      <div
-        className="
-      grid
-      md:grid-cols-2
-      gap-6
-      "
-      >
-        {/* Other Names */}
-
-        <InfoCard
-          icon={<Bug />}
-          title="Other Names"
-          content={disease.otherNames}
-        />
-
-        {/* Causes */}
-
-        <InfoCard
-          icon={<AlertCircle />}
-          title="Causes"
-          content={disease.causes}
-        />
-
-        {/* Symptoms */}
-
-        <InfoCard
-          icon={<Stethoscope />}
-          title="Symptoms"
-          content={disease.symptoms}
-        />
-
-        {/* Treatment */}
-
-        <div
-          className="
-        bg-white
-        rounded-3xl
-        border
-        shadow-sm
-        p-6
-        "
-        >
-          <div
-            className="
-          flex
-          items-center
-          gap-3
-          text-emerald-600
-          mb-4
-          "
-          >
-            <Sprout />
-
-            <h2
-              className="
-            text-xl
-            font-bold
-            text-gray-900
-            "
-            >
-              Treatment
-            </h2>
-          </div>
-
-          <ul
-            className="
-          space-y-3
-          "
-          >
-            {(disease.treatment?.steps ?? []).map((step: string, index: number) => (
-              <li
-                key={index}
-                className="
-            flex
-            gap-3
-            text-gray-600
-            "
-              >
-                <span
-                  className="
-              w-6
-              h-6
-              rounded-full
-              bg-emerald-100
-              text-emerald-700
-              flex
-              items-center
-              justify-center
-              text-sm
-              font-bold
-              "
-                >
-                  {index + 1}
-                </span>
-
-                {step}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoCard({
-  icon,
-  title,
-  content,
-}: {
-  icon: any;
-  title: string;
-  content: string;
-}) {
   return (
     <div
       className="
-bg-white
-rounded-3xl
-border
-shadow-sm
-p-6
+min-h-screen
+py-8
 "
     >
+      <button
+        onClick={() => navigate(-1)}
+        className="
+mb-6
+bg-white
+p-3
+rounded-full
+shadow
+hover:scale-105
+transition
+"
+      >
+        <ArrowLeft />
+      </button>
+
       <div
         className="
+max-w-7xl
+mx-auto
+bg-white
+rounded-[40px]
+shadow-xl
+overflow-hidden
+grid
+lg:grid-cols-2
+"
+      >
+        {/* LEFT SIDE */}
+
+        <div
+          className="
+p-8
+flex
+flex-col
+items-center
+justify-center
+text-black
+"
+        >
+          <div
+            className="
+w-full
+h-[500px]
+rounded-3xl
+overflow-hidden
+shadow-2xl
+"
+          >
+            {disease.imageUrl ? (
+              <img
+                src={disease.imageUrl}
+                className="
+w-full
+h-full
+object-cover
+"
+              />
+            ) : (
+              <div
+                className="
+w-full
+h-full
+flex
+items-center
+justify-center
+bg-emerald-50
+text-emerald-600
+"
+              >
+                <Bug size={120} />
+              </div>
+            )}
+          </div>
+
+          <div
+            className="
+mt-8
+text-center
+"
+          >
+            <div
+              className="
+inline-flex
+items-center
+gap-2
+bg-gray-100
+px-4
+py-2
+rounded-full
+"
+            >
+              {disease.type || "Plant Disease"}
+            </div>
+
+            <h1
+              className="
+text-5xl
+font-bold
+mt-5
+"
+            >
+              {disease.name}
+            </h1>
+
+            <p
+              className="
+text-black
+italic
+text-xl
+mt-3
+"
+            >
+              {disease.otherNames}
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT SIDE */}
+
+        <div
+          className="
+p-10
+space-y-8
+"
+        >
+          <section>
+            <h2
+              className="
+text-3xl
+font-bold
+mb-5
+"
+            >
+              Overview
+            </h2>
+
+            <div
+              className="
+grid
+md:grid-cols-2
+gap-4
+"
+            >
+              {[
+                ["Type", disease.type],
+                ["Other Names", disease.otherNames],
+              ].map((item) => (
+                <div
+                  key={item[0]}
+                  className="
+bg-emerald-50
+rounded-2xl
+p-5
+"
+                >
+                  <p
+                    className="
+text-gray-500
+text-sm
+"
+                  >
+                    {item[0]}
+                  </p>
+
+                  <p
+                    className="
+font-bold
+text-emerald-700
+"
+                  >
+                    {item[1]}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div
+            className="
+border-t
+"
+          />
+
+          <section>
+            <h2
+              className="
+text-3xl
+font-bold
+mb-3
+"
+            >
+              Description
+            </h2>
+
+            <p
+              className="
+text-gray-600
+leading-8
+text-lg
+"
+            >
+              {disease.description}
+            </p>
+          </section>
+
+          <section>
+            <h2
+              className="
+text-3xl
+font-bold
+mb-3
+"
+            >
+              Causes
+            </h2>
+
+            <p
+              className="
+text-gray-600
+leading-8
+text-lg
+"
+            >
+              {disease.causes}
+            </p>
+          </section>
+
+          <section>
+            <h2
+              className="
+text-3xl
+font-bold
+mb-5
+"
+            >
+              Diagnosis &amp; Treatment
+            </h2>
+
+            <div
+              className="
+grid
+md:grid-cols-2
+gap-5
+"
+            >
+              <CareCard
+                icon={<Stethoscope />}
+                title="Symptoms"
+                text={disease.symptoms}
+              />
+
+              <CareCard
+                icon={<AlertCircle />}
+                title="Causes"
+                text={disease.causes}
+              />
+
+              <CareCard icon={<Tag />} title="Type" text={disease.type} />
+
+              <CareCard
+                icon={<Bug />}
+                title="Other Names"
+                text={disease.otherNames}
+              />
+            </div>
+          </section>
+
+          {treatmentSteps.length > 0 && (
+            <section>
+              <div
+                className="
+bg-gray-50
+border
+rounded-3xl
+p-6
+"
+              >
+                <div
+                  className="
 flex
 items-center
 gap-3
 text-emerald-600
 mb-4
 "
-      >
-        {icon}
+                >
+                  <Sprout />
 
-        <h2
-          className="
+                  <h2
+                    className="
 text-xl
 font-bold
 text-gray-900
 "
-        >
-          {title}
-        </h2>
-      </div>
+                  >
+                    Treatment Steps
+                  </h2>
+                </div>
 
-      <p
-        className="
+                <ul
+                  className="
+space-y-3
+"
+                >
+                  {treatmentSteps.map((step: string, index: number) => (
+                    <li
+                      key={index}
+                      className="
+flex
+gap-3
 text-gray-600
-leading-relaxed
+"
+                    >
+                      <span
+                        className="
+w-6
+h-6
+rounded-full
+bg-emerald-100
+text-emerald-700
+flex
+items-center
+justify-center
+text-sm
+font-bold
+shrink-0
+"
+                      >
+                        {index + 1}
+                      </span>
+
+                      {step}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CareCard({
+  icon,
+
+  title,
+
+  text,
+}: any) {
+  return (
+    <div
+      className="
+bg-gray-50
+border
+rounded-3xl
+p-5
+flex
+gap-4
+items-center
+hover:shadow-lg
+transition
+"
+    >
+      <div
+        className="
+bg-emerald-100
+text-emerald-700
+p-4
+rounded-2xl
 "
       >
-        {content}
-      </p>
+        {icon}
+      </div>
+
+      <div>
+        <h3
+          className="
+font-bold
+text-lg
+"
+        >
+          {title}
+        </h3>
+
+        <p
+          className="
+text-gray-500
+"
+        >
+          {text}
+        </p>
+      </div>
     </div>
   );
 }
