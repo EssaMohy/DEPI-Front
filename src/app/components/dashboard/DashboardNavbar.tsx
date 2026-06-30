@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Leaf,
@@ -10,6 +10,10 @@ import {
   UserCircle,
   Menu,
   X,
+  Settings,
+  LogOut,
+  User,
+  CalendarDays,
 } from "lucide-react";
 
 export function DashboardNavbar() {
@@ -19,27 +23,49 @@ export function DashboardNavbar() {
 
   const [open, setOpen] = useState(false);
 
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: any) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", close);
+
+    return () => {
+      document.removeEventListener("mousedown", close);
+    };
+  }, []);
+
   const tabs = [
     {
       name: "Community",
       path: "/community",
       icon: Users,
     },
+
     {
       name: "Articles",
       path: "/articles",
       icon: BookOpen,
     },
+
     {
       name: "Plants",
       path: "/plants",
       icon: Sprout,
     },
+
     {
       name: "Diseases",
       path: "/diseases",
       icon: Bug,
     },
+
     {
       name: "Dashboard",
       path: "/dashboard",
@@ -102,7 +128,6 @@ text-emerald-600
             className="
 font-semibold
 text-xl
-text-gray-900
 hidden
 sm:block
 "
@@ -111,14 +136,13 @@ sm:block
           </span>
         </div>
 
-        {/* Desktop Tabs */}
+        {/* Desktop tabs */}
 
         <div
           className="
 hidden
 lg:flex
-gap-4
-xl:gap-6
+gap-5
 "
         >
           {tabs.map((tab) => {
@@ -150,7 +174,7 @@ ${
               >
                 <Icon size={18} />
 
-                <span>{tab.name}</span>
+                {tab.name}
               </button>
             );
           })}
@@ -163,25 +187,175 @@ ${
 flex
 items-center
 gap-3
+relative
 "
+          ref={profileRef}
         >
+          {/* Profile */}
+
           <button
-            onClick={() => navigate("/profile")}
+            onClick={() => setProfileOpen(!profileOpen)}
             className="
 text-gray-600
 hover:text-emerald-600
+transition
 "
           >
             <UserCircle size={34} />
           </button>
 
-          {/* Mobile Button */}
+          {/* Floating Menu */}
+
+          {profileOpen && (
+            <div
+              className="
+absolute
+right-0
+top-12
+w-72
+bg-white
+rounded-2xl
+shadow-xl
+border
+p-4
+"
+            >
+              {/* User Info */}
+
+              <div
+                className="
+flex
+items-center
+gap-3
+pb-4
+border-b
+"
+              >
+                <div
+                  className="
+w-12
+h-12
+rounded-full
+bg-emerald-100
+flex
+items-center
+justify-center
+"
+                >
+                  <User
+                    className="
+text-emerald-700
+"
+                  />
+                </div>
+
+                <div>
+                  <h3
+                    className="
+font-bold
+text-gray-900
+"
+                  >
+                    Essam
+                  </h3>
+
+                  <p
+                    className="
+text-sm
+text-gray-500
+"
+                  >
+                    Plant Lover
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="
+mt-3
+space-y-2
+"
+              >
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="
+w-full
+flex
+items-center
+gap-3
+px-3
+py-3
+rounded-xl
+hover:bg-gray-100
+"
+                >
+                  <User size={18} />
+                  Profile
+                </button>
+                <button
+                  onClick={() => navigate("/care-history")}
+                  className="
+w-full
+flex
+items-center
+gap-3
+px-3
+py-3
+rounded-xl
+hover:bg-gray-100
+"
+                >
+                  <CalendarDays size={18} />
+                  Care History
+                </button>
+                <button
+                  onClick={() => navigate("/settings")}
+                  className="
+w-full
+flex
+items-center
+gap-3
+px-3
+py-3
+rounded-xl
+hover:bg-gray-100
+"
+                >
+                  <Settings size={18} />
+                  Settings
+                </button>
+
+                <button
+                  onClick={() => {
+                    // logout logic here
+
+                    navigate("/login");
+                  }}
+                  className="
+w-full
+flex
+items-center
+gap-3
+px-3
+py-3
+rounded-xl
+text-red-600
+hover:bg-red-50
+"
+                >
+                  <LogOut size={18} />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile menu button */}
 
           <button
             onClick={() => setOpen(!open)}
             className="
 lg:hidden
-text-gray-700
 "
           >
             {open ? <X size={28} /> : <Menu size={28} />}
@@ -189,50 +363,39 @@ text-gray-700
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile tabs */}
 
       {open && (
         <div
           className="
 lg:hidden
-px-4
-pb-5
-bg-white
 border-t
+bg-white
+p-4
 "
         >
           <div
             className="
-flex
-flex-col
-gap-2
-mt-4
+space-y-2
 "
           >
             {tabs.map((tab) => {
               const Icon = tab.icon;
 
-              const active = location.pathname === tab.path;
-
               return (
                 <button
                   key={tab.path}
                   onClick={() => goTo(tab.path)}
-                  className={`
-
+                  className="
+w-full
 flex
 items-center
 gap-3
 px-4
 py-3
 rounded-xl
-transition
-
-${
-  active ? "bg-emerald-100 text-emerald-700" : "text-gray-600 hover:bg-gray-100"
-}
-
-`}
+hover:bg-gray-100
+"
                 >
                   <Icon size={20} />
 

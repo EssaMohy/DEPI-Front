@@ -21,6 +21,9 @@ import PlantDetailsPage from "./pages/PlantDetailsPage";
 import DiseasesPage from "./pages/home/DiseasesPage";
 import ProfilePage from "./pages/home/ProfilePage";
 
+import SettingsPage from "./pages/SettingsPage";
+import CareHistoryPage from "./pages/CareHistoryPage";
+
 export default function App() {
   return (
     <PlantProvider>
@@ -51,6 +54,8 @@ export default function App() {
             <Route path="/plants/details" element={<PlantDetailsPage />} />
             <Route path="/articles/details" element={<ArticleDetailsPage />} />
           </Route>
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/care-history" element={<CareHistoryPage />} />
         </Routes>
       </BrowserRouter>
     </PlantProvider>
