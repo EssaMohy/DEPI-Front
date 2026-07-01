@@ -26,6 +26,7 @@ import CareHistoryPage from "./pages/CareHistoryPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import DiseaseDetailsPage from "./pages/DiseaseDetailsPage";
 import EditProfilePage from "./pages/home/EditProfilePage";
+import PublicProfilePage from "./pages/profile/PublicProfilePage";
 
 export default function App() {
   return (
@@ -62,6 +63,7 @@ export default function App() {
           </Route>
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/care-history" element={<CareHistoryPage />} />
+          <Route path="/profile/:id" element={<PublicProfilePage />} />
         </Routes>
       </BrowserRouter>
     </PlantProvider>
