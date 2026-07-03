@@ -7,7 +7,6 @@ import {
   Sprout,
   Bug,
   LayoutDashboard,
-  UserCircle,
   Menu,
   X,
   Settings,
@@ -16,11 +15,19 @@ import {
   Bell,
   CalendarDays,
 } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export function DashboardNavbar() {
   const navigate = useNavigate();
 
   const location = useLocation();
+
+  const { user, logout } = useAuth();
+
+  const initials = user
+    ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase()
+    : "";
 
   const [open, setOpen] = useState(false);
 
@@ -237,7 +244,12 @@ hover:text-emerald-600
 transition
 "
           >
-            <UserCircle size={34} />
+            <Avatar className="w-9 h-9">
+              <AvatarImage src={user?.avatar ?? undefined} alt={user?.userName} />
+              <AvatarFallback className="bg-emerald-100 text-emerald-700 text-sm font-semibold">
+                {initials || <User size={18} />}
+              </AvatarFallback>
+            </Avatar>
           </button>
 
           {/* Floating Menu */}
@@ -267,23 +279,12 @@ pb-4
 border-b
 "
               >
-                <div
-                  className="
-w-12
-h-12
-rounded-full
-bg-emerald-100
-flex
-items-center
-justify-center
-"
-                >
-                  <User
-                    className="
-text-emerald-700
-"
-                  />
-                </div>
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={user?.avatar ?? undefined} alt={user?.userName} />
+                  <AvatarFallback className="bg-emerald-100 text-emerald-700 font-semibold">
+                    {initials || <User className="text-emerald-700" />}
+                  </AvatarFallback>
+                </Avatar>
 
                 <div>
                   <h3
@@ -292,7 +293,7 @@ font-bold
 text-gray-900
 "
                   >
-                    Essam
+                    {user ? `${user.firstName} ${user.lastName}` : "Guest"}
                   </h3>
 
                   <p
@@ -301,7 +302,7 @@ text-sm
 text-gray-500
 "
                   >
-                    Plant Lover
+                    {user?.email ?? ""}
                   </p>
                 </div>
               </div>
@@ -362,10 +363,10 @@ hover:bg-gray-100
                 </button>
 
                 <button
-                  onClick={() => {
-                    // logout logic here
-
-                    navigate("/login");
+                  onClick={async () => {
+                    setProfileOpen(false);
+                    await logout();
+                    navigate("/");
                   }}
                   className="
 w-full

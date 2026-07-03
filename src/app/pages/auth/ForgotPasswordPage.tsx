@@ -1,15 +1,35 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, ArrowLeft, ArrowRight, KeyRound } from "lucide-react";
+import { Mail, ArrowLeft, ArrowRight, KeyRound, Loader2 } from "lucide-react";
 import { AuthLayout, Field, PrimaryBtn } from "../../components/auth/AuthUI";
+import { useAuth } from "../../../hooks/useAuth";
+import { getApiErrorMessage } from "../../../lib/api";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const { forgotPassword } = useAuth();
 
-  const handleSend = () => {
-    // pass the email along to the verify screen
-    navigate("/auth/verify", { state: { email } });
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSend = async () => {
+    setError(null);
+    if (!email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await forgotPassword(email.trim());
+      // Pass the email along to the verify screen
+      navigate("/auth/verify", { state: { email: email.trim() } });
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Could not send the reset code."));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -30,6 +50,11 @@ export default function ForgotPasswordPage() {
       </p>
 
       <div className="space-y-4">
+        {error && (
+          <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3">
+            {error}
+          </div>
+        )}
         <Field
           icon={Mail}
           type="email"
@@ -37,8 +62,14 @@ export default function ForgotPasswordPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <PrimaryBtn onClick={handleSend}>
-          Send reset code <ArrowRight className="w-5 h-5" />
+        <PrimaryBtn onClick={handleSend} disabled={isSubmitting}>
+          {isSubmitting ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              Send reset code <ArrowRight className="w-5 h-5" />
+            </>
+          )}
         </PrimaryBtn>
       </div>
     </AuthLayout>

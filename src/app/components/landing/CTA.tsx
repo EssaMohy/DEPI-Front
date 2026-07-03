@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
+import { resolveGetStartedPath } from "../../../lib/navigation";
 
 interface CTAProps {
   onWatchDemo: () => void;
@@ -7,6 +9,7 @@ interface CTAProps {
 
 export function CTA({ onWatchDemo }: CTAProps) {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   return (
     <section className="py-20 bg-gradient-to-br from-emerald-600 to-teal-700 text-white">
@@ -20,7 +23,7 @@ export function CTA({ onWatchDemo }: CTAProps) {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(resolveGetStartedPath(isAuthenticated))}
             className="bg-white text-emerald-600 px-8 py-4 rounded-full hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 group"
           >
             Get Started

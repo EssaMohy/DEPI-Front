@@ -10,6 +10,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useAuth } from "../../hooks/useAuth";
+import { resolveGetStartedPath } from "../../lib/navigation";
 
 interface DemoModalProps {
   onClose: () => void;
@@ -17,6 +19,7 @@ interface DemoModalProps {
 
 export function DemoModal({ onClose }: DemoModalProps) {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
 
   const demoSteps = [
@@ -78,7 +81,7 @@ export function DemoModal({ onClose }: DemoModalProps) {
 
   const handleGetStarted = () => {
     onClose();
-    navigate("/dashboard");
+    navigate(resolveGetStartedPath(isAuthenticated));
   };
 
   const handleNext = () => {

@@ -1,16 +1,57 @@
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Leaf } from "lucide-react";
+import {
+  Leaf,
+  User,
+  Bell,
+  Settings,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
+import { resolveGetStartedPath } from "../../../lib/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export function Navbar() {
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(e.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({
       behavior: "smooth",
-
       block: "start",
     });
   };
+
+  const handleGetStarted = () => {
+    navigate(resolveGetStartedPath(isAuthenticated));
+  };
+
+  const handleLogout = async () => {
+    setProfileOpen(false);
+    await logout();
+    navigate("/");
+  };
+
+  const initials = user
+    ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase()
+    : "";
 
   return (
     <nav
@@ -116,22 +157,119 @@ export function Navbar() {
             </button>
           </div>
 
-          {/* Button */}
+          {/* Right side: auth-aware */}
 
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="
-          bg-emerald-600 
-          text-white 
-          px-6 
-          py-2 
-          rounded-full 
-          hover:bg-emerald-700 
-          transition-colors
-          "
-          >
-            Get Started
-          </button>
+          {isAuthenticated ? (
+            <div className="relative flex items-center gap-3" ref={profileRef}>
+              <button
+                onClick={() => navigate("/notifications")}
+                className="text-gray-600 hover:text-emerald-600 transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={() => setProfileOpen((v) => !v)}
+                className="flex items-center gap-2 text-gray-700 hover:text-emerald-600 transition-colors"
+              >
+                <Avatar className="w-9 h-9">
+                  <AvatarImage src={user?.avatar ?? undefined} alt={user?.userName} />
+                  <AvatarFallback className="bg-emerald-100 text-emerald-700 text-sm font-semibold">
+                    {initials || <User className="w-4 h-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <ChevronDown className="w-4 h-4 hidden sm:block" />
+              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 top-12 w-64 bg-white rounded-2xl shadow-xl border p-2">
+                  <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                    <p className="font-semibold text-gray-900 truncate">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {user?.email}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate("/dashboard");
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 text-left"
+                  >
+                    <Leaf size={18} /> Dashboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate("/profile");
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 text-left"
+                  >
+                    <User size={18} /> Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      navigate("/settings");
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 text-left"
+                  >
+                    <Settings size={18} /> Settings
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 text-left"
+                  >
+                    <LogOut size={18} /> Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate("/auth/login")}
+                className="
+              hidden
+              sm:inline-flex
+              text-gray-600
+              hover:text-emerald-600
+              transition-colors
+              "
+              >
+                Login
+              </button>
+              <button
+                onClick={() => navigate("/auth/register")}
+                className="
+              hidden
+              sm:inline-flex
+              text-gray-600
+              hover:text-emerald-600
+              transition-colors
+              "
+              >
+                Register
+              </button>
+              <button
+                onClick={handleGetStarted}
+                className="
+              bg-emerald-600 
+              text-white 
+              px-6 
+              py-2 
+              rounded-full 
+              hover:bg-emerald-700 
+              transition-colors
+              "
+              >
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>

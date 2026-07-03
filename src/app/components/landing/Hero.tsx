@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { useAuth } from "../../../hooks/useAuth";
+import { resolveGetStartedPath } from "../../../lib/navigation";
 
 interface HeroProps {
   onWatchDemo: () => void;
@@ -8,6 +10,7 @@ interface HeroProps {
 
 export function Hero({ onWatchDemo }: HeroProps) {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   return (
     <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -28,7 +31,7 @@ export function Hero({ onWatchDemo }: HeroProps) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate(resolveGetStartedPath(isAuthenticated))}
                 className="bg-emerald-600 text-white px-8 py-4 rounded-full hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 group"
               >
                 Get Started Free
