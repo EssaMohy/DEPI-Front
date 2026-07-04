@@ -16,6 +16,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
+import { useUnreadNotificationsCount } from "../../../hooks/useUnreadNotificationsCount";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export function DashboardNavbar() {
@@ -24,6 +25,7 @@ export function DashboardNavbar() {
   const location = useLocation();
 
   const { user, logout } = useAuth();
+  const unreadCount = useUnreadNotificationsCount();
 
   const initials = user
     ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase()
@@ -213,9 +215,9 @@ transition
             <Bell size={28} />
 
             {/* unread badge */}
-
-            <span
-              className="
+            {unreadCount > 0 && (
+              <span
+                className="
 absolute
 -top-1
 -right-1
@@ -229,9 +231,10 @@ flex
 items-center
 justify-center
 "
-            >
-              3
-            </span>
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Profile */}

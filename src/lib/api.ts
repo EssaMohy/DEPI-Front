@@ -541,3 +541,42 @@ export const diseaseApi = {
       .get<ApiEnvelope<Disease>>(`/diseases/${id}`)
       .then((res) => res.data.data),
 };
+
+/**
+ * -----------------------------------------------------------------------
+ * Notifications API
+ * -----------------------------------------------------------------------
+ * `GET /notifications` — paginated, newest first, no server-side filter
+ * beyond pagination. Real `type` values produced by the backend today:
+ * `watering_reminder` / `fertilizing_reminder` (from the care-reminder
+ * worker, both include `plantId`), and `comment` / `like` (from the
+ * community feature, no `plantId`). There's no "mark all as read" or
+ * "delete" endpoint — only mark-one-as-read.
+ */
+export interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  plantId: number | null;
+  scheduledTime: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListParams {
+  page?: number;
+  limit?: number;
+}
+
+export const notificationApi = {
+  list: (params: NotificationListParams = {}) =>
+    api
+      .get<ApiListEnvelope<Notification>>("/notifications", { params })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  markAsRead: (id: number) =>
+    api
+      .patch<ApiEnvelope<Record<string, never>>>(`/notifications/${id}/read`)
+      .then((res) => res.data.data),
+};

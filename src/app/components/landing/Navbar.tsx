@@ -9,12 +9,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
+import { useUnreadNotificationsCount } from "../../../hooks/useUnreadNotificationsCount";
 import { resolveGetStartedPath } from "../../../lib/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export function Navbar() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const unreadCount = useUnreadNotificationsCount();
 
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -163,10 +165,15 @@ export function Navbar() {
             <div className="relative flex items-center gap-3" ref={profileRef}>
               <button
                 onClick={() => navigate("/notifications")}
-                className="text-gray-600 hover:text-emerald-600 transition-colors"
+                className="relative text-gray-600 hover:text-emerald-600 transition-colors"
                 aria-label="Notifications"
               >
                 <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               <button

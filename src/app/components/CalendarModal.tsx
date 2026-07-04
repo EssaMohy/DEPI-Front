@@ -12,12 +12,40 @@ interface CalendarModalProps {
   onClose: () => void;
 }
 
-function isSameDay(iso: string | null, year: number, month: number, day: number) {
-  if (!iso) return false;
-  const d = new Date(iso);
-  return (
-    d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+/**
+ * Whether `year/month/day` falls on the recurring care schedule anchored
+ * at `anchorIso` (the backend's next-due date) repeating every
+ * `frequencyDays`. Unlike checking `nextWatering` for equality (which
+ * only ever matches one single day), this projects the same interval
+ * forwards and backwards indefinitely — so navigating to any month,
+ * past or future, still shows the correct recurring pattern, the same
+ * "unlimited scale" the old mock-data version had, just anchored to a
+ * real date instead of an arbitrary day-of-month guess.
+ */
+function matchesSchedule(
+  anchorIso: string | null,
+  frequencyDays: number | null,
+  year: number,
+  month: number,
+  day: number,
+): boolean {
+  if (!anchorIso || !frequencyDays || frequencyDays <= 0) return false;
+
+  const anchor = new Date(anchorIso);
+  const anchorMidnight = Date.UTC(
+    anchor.getFullYear(),
+    anchor.getMonth(),
+    anchor.getDate(),
   );
+  const targetMidnight = Date.UTC(year, month, day);
+
+  const diffDays = Math.round(
+    (targetMidnight - anchorMidnight) / DAY_MS,
+  );
+  const remainder = ((diffDays % frequencyDays) + frequencyDays) % frequencyDays;
+  return remainder === 0;
 }
 
 export function CalendarModal({ plants = [], onClose }: CalendarModalProps) {
@@ -37,8 +65,9 @@ export function CalendarModal({ plants = [], onClose }: CalendarModalProps) {
     setCurrentDate(new Date(year, month + amount, 1));
   };
 
-  // Reflects each plant's actual next scheduled watering/fertilizing date
-  // from the backend, rather than a guessed repeating pattern.
+  // Projects each plant's real watering/fertilizing interval across
+  // whatever month is currently showing — works for any month, not just
+  // the single next occurrence the backend returns.
   const getTasks = (
     day: number,
     forYear = year,
@@ -47,10 +76,26 @@ export function CalendarModal({ plants = [], onClose }: CalendarModalProps) {
     return plants.flatMap((myPlant): CalendarTask[] => {
       const tasks: CalendarTask[] = [];
 
-      if (isSameDay(myPlant.nextWatering, forYear, forMonth, day)) {
+      if (
+        matchesSchedule(
+          myPlant.nextWatering,
+          myPlant.wateringFrequency,
+          forYear,
+          forMonth,
+          day,
+        )
+      ) {
         tasks.push({ type: "water", plant: myPlant.plant.commonName });
       }
-      if (isSameDay(myPlant.nextFertilizing, forYear, forMonth, day)) {
+      if (
+        matchesSchedule(
+          myPlant.nextFertilizing,
+          myPlant.fertilizingFrequency,
+          forYear,
+          forMonth,
+          day,
+        )
+      ) {
         tasks.push({ type: "fertilize", plant: myPlant.plant.commonName });
       }
 
