@@ -1,7 +1,26 @@
 import { useState } from "react";
 import { X, ChevronLeft, ChevronRight, Droplets, Sprout } from "lucide-react";
+import type { MyPlant } from "../../lib/api";
 
-export function CalendarModal({ plants, onClose }: any) {
+interface CalendarTask {
+  type: "water" | "fertilize";
+  plant: string;
+}
+
+interface CalendarModalProps {
+  plants: MyPlant[];
+  onClose: () => void;
+}
+
+function isSameDay(iso: string | null, year: number, month: number, day: number) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return (
+    d.getFullYear() === year && d.getMonth() === month && d.getDate() === day
+  );
+}
+
+export function CalendarModal({ plants = [], onClose }: CalendarModalProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(new Date());
 
@@ -18,29 +37,32 @@ export function CalendarModal({ plants, onClose }: any) {
     setCurrentDate(new Date(year, month + amount, 1));
   };
 
-  const getTasks = (day: number) => {
-    return plants.flatMap((plant: any) => {
-      const tasks = [];
+  // Reflects each plant's actual next scheduled watering/fertilizing date
+  // from the backend, rather than a guessed repeating pattern.
+  const getTasks = (
+    day: number,
+    forYear = year,
+    forMonth = month,
+  ): CalendarTask[] => {
+    return plants.flatMap((myPlant): CalendarTask[] => {
+      const tasks: CalendarTask[] = [];
 
-      // watering
-      if (day % (plant.wateringFrequency || 7) === 0) {
-        tasks.push({
-          type: "water",
-          plant: plant.name,
-        });
+      if (isSameDay(myPlant.nextWatering, forYear, forMonth, day)) {
+        tasks.push({ type: "water", plant: myPlant.plant.commonName });
       }
-
-      // fertilizing every 30 days
-      if (day % 30 === 0) {
-        tasks.push({
-          type: "fertilize",
-          plant: plant.name,
-        });
+      if (isSameDay(myPlant.nextFertilizing, forYear, forMonth, day)) {
+        tasks.push({ type: "fertilize", plant: myPlant.plant.commonName });
       }
 
       return tasks;
     });
   };
+
+  const selectedDayTasks = getTasks(
+    selectedDay.getDate(),
+    selectedDay.getFullYear(),
+    selectedDay.getMonth(),
+  );
 
   return (
     <div
@@ -167,10 +189,10 @@ export function CalendarModal({ plants, onClose }: any) {
             </h3>
 
             <div className="max-h-48 overflow-y-auto pr-1 space-y-2">
-              {getTasks(selectedDay.getDate()).length === 0 ? (
+              {selectedDayTasks.length === 0 ? (
                 <p className="text-gray-500">No care scheduled</p>
               ) : (
-                getTasks(selectedDay.getDate()).map((task: any, index) => (
+                selectedDayTasks.map((task, index) => (
                   <div key={index} className="flex items-center gap-3 min-w-0">
                     {task.type === "water" ? (
                       <Droplets className="text-blue-600 shrink-0" size={18} />

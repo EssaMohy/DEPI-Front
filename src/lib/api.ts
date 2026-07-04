@@ -177,6 +177,24 @@ interface ApiEnvelope<T> {
   timestamp: string;
 }
 
+/**
+ * Shape for paginated LIST endpoints specifically. The backend's
+ * `Controller.buildSuccessResponse` special-cases any controller payload
+ * shaped like `{ data, meta }`: it hoists both up to the top level of the
+ * JSON response instead of nesting them under `data`. So a paginated
+ * response is `{ success, message, data: T[], meta, timestamp }` — the
+ * array is directly under `data`, and `meta` is a sibling of `data`, NOT
+ * `data.meta`. Every list endpoint (`/plants`, `/my-plants`,
+ * `/my-plants/care/logs`, ...) needs this type, not `ApiEnvelope<{data,meta}>`.
+ */
+interface ApiListEnvelope<T> {
+  success: boolean;
+  message: string;
+  data: T[];
+  meta: PaginationMeta;
+  timestamp: string;
+}
+
 interface AccessTokenPayload {
   token: string;
   type: "Bearer";
@@ -332,4 +350,194 @@ export const profileApi = {
       })
       .then((res) => res.data.data.user);
   },
+};
+
+/**
+ * -----------------------------------------------------------------------
+ * Pagination
+ * -----------------------------------------------------------------------
+ */
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+/**
+ * -----------------------------------------------------------------------
+ * Plants (catalog) API
+ * -----------------------------------------------------------------------
+ * `GET /plants` — the browsable species catalog. `GET /plants/:id`
+ * returns a single catalog entry, unwrapped (no `{ plant }` envelope).
+ */
+export interface CatalogPlant {
+  id: number;
+  commonName: string;
+  scientificName: string;
+  family: string;
+  about: string;
+  temperature: string;
+  light: string;
+  water: string;
+  whereToGrow: string;
+  toxicity: string;
+  howToGrow: string;
+  category: string[];
+  kingdom: string;
+  order: string;
+  imageUrl: string;
+  wateringFrequency: number | null;
+  fertilizingFrequency: number | null;
+}
+
+export interface PlantListParams {
+  search?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const plantApi = {
+  list: (params: PlantListParams = {}) =>
+    api
+      .get<ApiListEnvelope<CatalogPlant>>("/plants", { params })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  getById: (id: number) =>
+    api
+      .get<ApiEnvelope<CatalogPlant>>(`/plants/${id}`)
+      .then((res) => res.data.data),
+};
+
+/**
+ * -----------------------------------------------------------------------
+ * My Plants API
+ * -----------------------------------------------------------------------
+ * The signed-in user's personal plant collection. Note the route
+ * parameter is named `:plantId` on the backend but is actually the
+ * `MyPlant` record's own id (not the catalog plant id) — `myPlantId`
+ * here for clarity.
+ */
+export interface MyPlant {
+  id: number;
+  plant: CatalogPlant;
+  imageUrl: string | null;
+  wateringFrequency: number | null;
+  fertilizingFrequency: number | null;
+  nextWatering: string | null;
+  nextFertilizing: string | null;
+  lastWatered: string | null;
+  lastFertilized: string | null;
+  createdAt: string;
+}
+
+export interface MyPlantListParams {
+  page?: number;
+  limit?: number;
+}
+
+export const myPlantApi = {
+  list: (params: MyPlantListParams = {}) =>
+    api
+      .get<ApiListEnvelope<MyPlant>>("/my-plants", { params })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  add: (plantId: number) =>
+    api
+      .post<ApiEnvelope<{ myPlant: MyPlant }>>("/my-plants", { plantId })
+      .then((res) => res.data.data.myPlant),
+
+  remove: (myPlantId: number) =>
+    api
+      .delete<ApiEnvelope<Record<string, never>>>(`/my-plants/${myPlantId}`)
+      .then((res) => res.data.data),
+
+  water: (myPlantId: number) =>
+    api
+      .post<ApiEnvelope<{ myPlant: MyPlant }>>(`/my-plants/${myPlantId}/water`)
+      .then((res) => res.data.data.myPlant),
+
+  fertilize: (myPlantId: number) =>
+    api
+      .post<ApiEnvelope<{ myPlant: MyPlant }>>(
+        `/my-plants/${myPlantId}/fertilize`,
+      )
+      .then((res) => res.data.data.myPlant),
+};
+
+/**
+ * -----------------------------------------------------------------------
+ * Care logs API
+ * -----------------------------------------------------------------------
+ * Powers the Care History page. `GET /my-plants/care/logs` returns raw
+ * log entries (no nested plant info) — cross-reference `myPlantId`
+ * against the collection from `usePlants()` to show a plant's name.
+ */
+export interface CareLog {
+  id: number;
+  userId: number;
+  myPlantId: number;
+  type: "watering" | "fertilizing";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CareLogListParams {
+  myPlantId?: number;
+  page?: number;
+  limit?: number;
+}
+
+export const careLogApi = {
+  list: (params: CareLogListParams = {}) =>
+    api
+      .get<ApiListEnvelope<CareLog>>("/my-plants/care/logs", {
+        params,
+      })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+};
+
+/**
+ * -----------------------------------------------------------------------
+ * Diseases (catalog) API
+ * -----------------------------------------------------------------------
+ * `GET /diseases` — the browsable disease knowledge base. Only supports
+ * an exact `type` filter server-side (no text search), so pages that
+ * want to "search" fetch a page and filter client-side.
+ * `GET /diseases/:id` returns a single entry, unwrapped like `/plants/:id`.
+ */
+export interface Disease {
+  id: number;
+  name: string;
+  otherNames: string[];
+  type: string | null;
+  causes: string | null;
+  symptoms: string | null;
+  treatment: { steps: string[] } | null;
+  description: string | null;
+  imageUrl: string | null;
+}
+
+export interface DiseaseListParams {
+  type?: string;
+  page?: number;
+  limit?: number;
+}
+
+export const diseaseApi = {
+  list: (params: DiseaseListParams = {}) =>
+    api
+      .get<ApiListEnvelope<Disease>>("/diseases", { params })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  getById: (id: number) =>
+    api
+      .get<ApiEnvelope<Disease>>(`/diseases/${id}`)
+      .then((res) => res.data.data),
 };

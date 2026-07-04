@@ -3,6 +3,7 @@ import { AuthProvider } from "../context/AuthContext";
 import ProtectedRoute from "../routes/ProtectedRoute";
 import GuestRoute from "../routes/GuestRoute";
 import { PlantProvider } from "./context/PlantContext";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 import { LandingPage } from "./pages/LandingPage";
 import { DashboardPage } from "./pages/home/DashboardPage";
@@ -33,56 +34,64 @@ import PublicProfilePage from "./pages/profile/PublicProfilePage";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <PlantProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public */}
-            <Route path="/" element={<LandingPage />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <PlantProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public */}
+              <Route path="/" element={<LandingPage />} />
 
-            {/* Auth - guest only (redirect away if already signed in) */}
-            <Route element={<GuestRoute />}>
-              <Route path="/auth/login" element={<LoginPage />} />
-              <Route path="/auth/register" element={<RegisterPage />} />
-            </Route>
-
-            {/* Auth - accessible regardless of session state */}
-            <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
-            <Route path="/auth/verify" element={<VerifyOtpPage />} />
-            <Route path="/auth/reset" element={<ResetPasswordPage />} />
-            <Route path="/auth/success" element={<AuthSuccessPage />} />
-
-            {/* Protected app routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path="/community" element={<CommunityPage />} />
-                <Route path="/articles" element={<ArticlesPage />} />
-                <Route path="/plants" element={<PlantsPage />} />
-                <Route path="/diseases" element={<DiseasesPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/plants/details" element={<PlantDetailsPage />} />
-                <Route
-                  path="/articles/details"
-                  element={<ArticleDetailsPage />}
-                />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route
-                  path="/diseases/details"
-                  element={<DiseaseDetailsPage />}
-                />
-                <Route path="/profile/edit" element={<EditProfilePage />} />
+              {/* Auth - guest only (redirect away if already signed in) */}
+              <Route element={<GuestRoute />}>
+                <Route path="/auth/login" element={<LoginPage />} />
+                <Route path="/auth/register" element={<RegisterPage />} />
               </Route>
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/care-history" element={<CareHistoryPage />} />
-              <Route path="/profile/:id" element={<PublicProfilePage />} />
-            </Route>
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </PlantProvider>
-    </AuthProvider>
+              {/* Auth - accessible regardless of session state */}
+              <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
+              <Route path="/auth/verify" element={<VerifyOtpPage />} />
+              <Route path="/auth/reset" element={<ResetPasswordPage />} />
+              <Route path="/auth/success" element={<AuthSuccessPage />} />
+
+              {/* Protected app routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path="/community" element={<CommunityPage />} />
+                  <Route path="/articles" element={<ArticlesPage />} />
+                  <Route path="/plants" element={<PlantsPage />} />
+                  <Route path="/diseases" element={<DiseasesPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/plants/:id" element={<PlantDetailsPage />} />
+                  <Route
+                    path="/articles/details"
+                    element={<ArticleDetailsPage />}
+                  />
+                  <Route
+                    path="/notifications"
+                    element={<NotificationsPage />}
+                  />
+                  <Route
+                    path="/diseases/:id"
+                    element={<DiseaseDetailsPage />}
+                  />
+                  <Route path="/profile/edit" element={<EditProfilePage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/care-history" element={<CareHistoryPage />} />
+                  <Route
+                    path="/profile/:id"
+                    element={<PublicProfilePage />}
+                  />
+                </Route>
+              </Route>
+
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </PlantProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

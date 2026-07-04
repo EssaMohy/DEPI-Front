@@ -1,45 +1,104 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
-export interface Plant {
-  id: string;
-  name: string;
-  species: string;
-  wateringIntervalDays: number;
-  lastWatered: string; // ISO date
-  imageUrl?: string;
-}
+import { useAuth } from "../../hooks/useAuth";
+import {
+  myPlantApi,
+  getApiErrorMessage,
+  type MyPlant,
+} from "../../lib/api";
 
 interface PlantContextValue {
-  plants: Plant[];
-  addPlant: (plant: Omit<Plant, "id">) => void;
-  waterPlant: (id: string) => void;
-  deletePlant: (id: string) => void;
+  /** The signed-in user's plant collection. */
+  plants: MyPlant[];
+  isLoading: boolean;
+  error: string | null;
+  /** Re-fetch the collection from the server. */
+  refresh: () => Promise<void>;
+  /** Add a catalog plant (by its catalog id) to the user's collection. */
+  addPlant: (catalogPlantId: number) => Promise<MyPlant>;
+  /** Mark a plant (by its MyPlant id) as watered today. */
+  waterPlant: (myPlantId: number) => Promise<void>;
+  /** Mark a plant (by its MyPlant id) as fertilized today. */
+  fertilizePlant: (myPlantId: number) => Promise<void>;
+  /** Remove a plant (by its MyPlant id) from the collection. */
+  deletePlant: (myPlantId: number) => Promise<void>;
 }
 
 const PlantContext = createContext<PlantContextValue | null>(null);
 
 export function PlantProvider({ children }: { children: ReactNode }) {
-  const [plants, setPlants] = useState<Plant[]>([]);
+  const { isAuthenticated } = useAuth();
+  const [plants, setPlants] = useState<MyPlant[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addPlant = (plant: Omit<Plant, "id">) => {
-    setPlants((prev) => [...prev, { ...plant, id: crypto.randomUUID() }]);
-  };
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await myPlantApi.list({ limit: 100 });
+      setPlants(result.data);
+    } catch (err) {
+      setError(getApiErrorMessage(err, "Could not load your plants."));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const waterPlant = (id: string) => {
+  // Load the collection once signed in; clear it on sign-out.
+  useEffect(() => {
+    if (isAuthenticated) {
+      refresh();
+    } else {
+      setPlants([]);
+      setError(null);
+    }
+  }, [isAuthenticated, refresh]);
+
+  const addPlant = useCallback(async (catalogPlantId: number) => {
+    const myPlant = await myPlantApi.add(catalogPlantId);
+    setPlants((prev) => [myPlant, ...prev]);
+    return myPlant;
+  }, []);
+
+  const waterPlant = useCallback(async (myPlantId: number) => {
+    const updated = await myPlantApi.water(myPlantId);
     setPlants((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, lastWatered: new Date().toISOString() } : p,
-      ),
+      prev.map((p) => (p.id === myPlantId ? updated : p)),
     );
-  };
+  }, []);
 
-  const deletePlant = (id: string) => {
-    setPlants((prev) => prev.filter((p) => p.id !== id));
-  };
+  const fertilizePlant = useCallback(async (myPlantId: number) => {
+    const updated = await myPlantApi.fertilize(myPlantId);
+    setPlants((prev) =>
+      prev.map((p) => (p.id === myPlantId ? updated : p)),
+    );
+  }, []);
+
+  const deletePlant = useCallback(async (myPlantId: number) => {
+    await myPlantApi.remove(myPlantId);
+    setPlants((prev) => prev.filter((p) => p.id !== myPlantId));
+  }, []);
 
   return (
     <PlantContext.Provider
-      value={{ plants, addPlant, waterPlant, deletePlant }}
+      value={{
+        plants,
+        isLoading,
+        error,
+        refresh,
+        addPlant,
+        waterPlant,
+        fertilizePlant,
+        deletePlant,
+      }}
     >
       {children}
     </PlantContext.Provider>
