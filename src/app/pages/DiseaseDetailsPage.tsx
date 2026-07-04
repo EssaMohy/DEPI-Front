@@ -109,12 +109,6 @@ export default function DiseaseDetailsPage() {
             </div>
 
             <h1 className="text-5xl font-bold mt-5">{disease.name}</h1>
-
-            {otherNamesText && (
-              <p className="text-black italic text-xl mt-3">
-                {otherNamesText}
-              </p>
-            )}
           </div>
         </div>
 
@@ -157,29 +151,18 @@ export default function DiseaseDetailsPage() {
               Diagnosis &amp; Treatment
             </h2>
 
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className=" gap-5">
               <CareCard
                 icon={<Stethoscope />}
                 title="Symptoms"
                 text={disease.symptoms || "—"}
-              />
-              <CareCard
-                icon={<AlertCircle />}
-                title="Causes"
-                text={disease.causes || "—"}
-              />
-              <CareCard icon={<Tag />} title="Type" text={disease.type || "—"} />
-              <CareCard
-                icon={<Bug />}
-                title="Other Names"
-                text={otherNamesText || "—"}
               />
             </div>
           </section>
 
           {treatmentSteps.length > 0 && (
             <section>
-              <div className="bg-gray-50 border rounded-3xl p-6">
+              <div className="bg-gray-50 border rounded-3xl p-6 hover:shadow-lg transition">
                 <div className="flex items-center gap-3 text-emerald-600 mb-4">
                   <Sprout />
                   <h2 className="text-xl font-bold text-gray-900">

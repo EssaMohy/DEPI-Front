@@ -73,14 +73,12 @@ export function PlantDashboard({
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-3">
-                {onBackToLanding && (
-                  <button
-                    onClick={onBackToLanding}
-                    className="p-2 hover:bg-gray-100 rounded-full"
-                  >
-                    <ArrowLeft />
-                  </button>
-                )}
+                <button
+                  onClick={() => navigate(-1)}
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <ArrowLeft />
+                </button>
 
                 <h1 className="text-3xl font-bold">My Plants</h1>
               </div>
@@ -202,10 +200,20 @@ export function PlantDashboard({
                     </button>
 
                     <div className="mt-4 space-y-2">
-                      <p className={waterIn !== null && waterIn <= 0 ? "text-red-600" : ""}>
+                      <p
+                        className={
+                          waterIn !== null && waterIn <= 0 ? "text-red-600" : ""
+                        }
+                      >
                         💧 Water: {formatDays(waterIn)}
                       </p>
-                      <p className={fertilizeIn !== null && fertilizeIn <= 0 ? "text-amber-600" : ""}>
+                      <p
+                        className={
+                          fertilizeIn !== null && fertilizeIn <= 0
+                            ? "text-amber-600"
+                            : ""
+                        }
+                      >
                         🌱 Fertilize: {formatDays(fertilizeIn)}
                       </p>
                     </div>
