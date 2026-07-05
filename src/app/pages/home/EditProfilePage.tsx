@@ -13,11 +13,8 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../../hooks/useAuth";
-import {
-  profileApi,
-  getApiErrorMessage,
-  type ProfileData,
-} from "../../../lib/api";
+import { useProfile } from "../../context/ProfileContext";
+import { profileApi, getApiErrorMessage } from "../../../lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 
 const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
@@ -25,9 +22,9 @@ const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
 export default function EditProfilePage() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
-
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  // Shared with the Profile page: any edit made here is reflected there
+  // (and everywhere else) immediately, no extra fetch required.
+  const { profile, isLoading: isLoadingProfile, applyUpdate } = useProfile();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -51,35 +48,17 @@ export default function EditProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // Seed the form once the shared profile (or the lightweight auth user,
+  // as a fallback) is available.
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfile() {
-      setIsLoadingProfile(true);
-      try {
-        const data = await profileApi.get();
-        if (!cancelled) {
-          setProfile(data);
-          setFirstName(data.firstName);
-          setLastName(data.lastName);
-        }
-      } catch {
-        // Fall back to the lightweight auth user already in context.
-        if (!cancelled && user) {
-          setFirstName(user.firstName);
-          setLastName(user.lastName);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingProfile(false);
-      }
+    if (profile) {
+      setFirstName(profile.firstName);
+      setLastName(profile.lastName);
+    } else if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
     }
-
-    loadProfile();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [profile, user]);
 
   const updatePassword = (key: keyof typeof passwords, value: string) => {
     setPasswords({ ...passwords, [key]: value });
@@ -103,9 +82,7 @@ export default function EditProfilePage() {
         lastName: lastName.trim(),
       });
       updateUser(updated);
-      setProfile((prev) =>
-        prev ? { ...prev, firstName: updated.firstName, lastName: updated.lastName } : prev,
-      );
+      applyUpdate({ firstName: updated.firstName, lastName: updated.lastName });
       setSavedProfile(true);
       setTimeout(() => setSavedProfile(false), 2500);
     } catch (err) {
@@ -172,9 +149,7 @@ export default function EditProfilePage() {
     try {
       const updated = await profileApi.updateAvatar(file);
       updateUser(updated);
-      setProfile((prev) =>
-        prev ? { ...prev, avatarUrl: updated.avatar } : prev,
-      );
+      applyUpdate({ avatarUrl: updated.avatar });
     } catch (err) {
       setAvatarError(getApiErrorMessage(err, "Could not upload your photo."));
     } finally {

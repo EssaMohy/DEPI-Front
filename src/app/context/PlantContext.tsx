@@ -13,6 +13,8 @@ import {
   getApiErrorMessage,
   type MyPlant,
 } from "../../lib/api";
+import { useProfile } from "./ProfileContext";
+import { useCareLogs } from "./CareLogContext";
 
 interface PlantContextValue {
   /** The signed-in user's plant collection. */
@@ -35,6 +37,8 @@ const PlantContext = createContext<PlantContextValue | null>(null);
 
 export function PlantProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
+  const { adjustCounts } = useProfile();
+  const { recordLocalEntry } = useCareLogs();
   const [plants, setPlants] = useState<MyPlant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,30 +66,50 @@ export function PlantProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, refresh]);
 
-  const addPlant = useCallback(async (catalogPlantId: number) => {
-    const myPlant = await myPlantApi.add(catalogPlantId);
-    setPlants((prev) => [myPlant, ...prev]);
-    return myPlant;
-  }, []);
+  const addPlant = useCallback(
+    async (catalogPlantId: number) => {
+      const myPlant = await myPlantApi.add(catalogPlantId);
+      setPlants((prev) => [myPlant, ...prev]);
+      // Keep the Profile page's "My Plants" counter correct immediately,
+      // regardless of whether it's mounted right now.
+      adjustCounts({ plantsCount: 1 });
+      return myPlant;
+    },
+    [adjustCounts],
+  );
 
-  const waterPlant = useCallback(async (myPlantId: number) => {
-    const updated = await myPlantApi.water(myPlantId);
-    setPlants((prev) =>
-      prev.map((p) => (p.id === myPlantId ? updated : p)),
-    );
-  }, []);
+  const waterPlant = useCallback(
+    async (myPlantId: number) => {
+      const updated = await myPlantApi.water(myPlantId);
+      setPlants((prev) =>
+        prev.map((p) => (p.id === myPlantId ? updated : p)),
+      );
+      adjustCounts({ wateringCount: 1 });
+      recordLocalEntry({ myPlantId, type: "watering" });
+    },
+    [adjustCounts, recordLocalEntry],
+  );
 
-  const fertilizePlant = useCallback(async (myPlantId: number) => {
-    const updated = await myPlantApi.fertilize(myPlantId);
-    setPlants((prev) =>
-      prev.map((p) => (p.id === myPlantId ? updated : p)),
-    );
-  }, []);
+  const fertilizePlant = useCallback(
+    async (myPlantId: number) => {
+      const updated = await myPlantApi.fertilize(myPlantId);
+      setPlants((prev) =>
+        prev.map((p) => (p.id === myPlantId ? updated : p)),
+      );
+      adjustCounts({ fertilizingCount: 1 });
+      recordLocalEntry({ myPlantId, type: "fertilizing" });
+    },
+    [adjustCounts, recordLocalEntry],
+  );
 
-  const deletePlant = useCallback(async (myPlantId: number) => {
-    await myPlantApi.remove(myPlantId);
-    setPlants((prev) => prev.filter((p) => p.id !== myPlantId));
-  }, []);
+  const deletePlant = useCallback(
+    async (myPlantId: number) => {
+      await myPlantApi.remove(myPlantId);
+      setPlants((prev) => prev.filter((p) => p.id !== myPlantId));
+      adjustCounts({ plantsCount: -1 });
+    },
+    [adjustCounts],
+  );
 
   return (
     <PlantContext.Provider

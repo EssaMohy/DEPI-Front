@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -12,40 +12,16 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../../hooks/useAuth";
-import { profileApi, getApiErrorMessage, type ProfileData } from "../../../lib/api";
+import { useProfile } from "../../context/ProfileContext";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadProfile() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await profileApi.get();
-        if (!cancelled) setProfile(data);
-      } catch (err) {
-        if (!cancelled) {
-          setError(getApiErrorMessage(err, "Could not load your profile."));
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    loadProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Shared across the app: counters update instantly whenever a plant
+  // is added/removed/watered/fertilized anywhere, including the
+  // dashboard, without needing to reload this page.
+  const { profile, isLoading, error } = useProfile();
 
   const handleLogout = async () => {
     await logout();
@@ -62,7 +38,7 @@ export default function ProfilePage() {
     (profile?.lastName ?? user?.lastName)?.[0] ?? ""
   }`.toUpperCase();
 
-  if (isLoading) {
+  if (isLoading && !profile) {
     return (
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
@@ -166,16 +142,73 @@ function StatCard({
   title: string;
   value: number;
 }) {
+  // Highlight briefly whenever a dashboard action (water, fertilize, add
+  // a plant...) changes this counter, so the update is felt, not just
+  // silently correct.
+  const [justChanged, setJustChanged] = useState(false);
+  const prevValue = useRef(value);
+
+  useEffect(() => {
+    if (prevValue.current !== value) {
+      prevValue.current = value;
+      setJustChanged(true);
+      const timeout = setTimeout(() => setJustChanged(false), 900);
+      return () => clearTimeout(timeout);
+    }
+  }, [value]);
+
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
-      <div className="bg-emerald-100 text-emerald-700 p-3 rounded-xl">
+    <div
+      className={`bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4 transition-all duration-300 ${
+        justChanged ? "ring-2 ring-emerald-400 shadow-md" : ""
+      }`}
+    >
+      <div
+        className={`bg-emerald-100 text-emerald-700 p-3 rounded-xl transition-transform duration-300 ${
+          justChanged ? "scale-110" : ""
+        }`}
+      >
         {icon}
       </div>
 
       <div>
-        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-2xl font-bold">
+          <AnimatedNumber value={value} />
+        </p>
         <p className="text-gray-500 text-sm">{title}</p>
       </div>
     </div>
   );
+}
+
+/** Eases a counter from its previous value to the new one instead of
+ * jumping, so a live update reads as motion rather than a glitch. */
+function AnimatedNumber({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value);
+  const fromRef = useRef(value);
+
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = value;
+    if (from === to) return;
+
+    const duration = 500;
+    const start = performance.now();
+
+    let frame: number;
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(from + (to - from) * eased));
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = to;
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <>{display}</>;
 }

@@ -1,18 +1,15 @@
-import { useNavigate } from "react-router-dom";
 import {
-  Droplet,
   Camera,
   Plus,
   Calendar,
   AlertCircle,
   Leaf,
-  Trash2,
   Sprout,
   ArrowLeft,
   Loader2,
 } from "lucide-react";
 
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { PlantCard } from "./PlantCard";
 import type { MyPlant } from "../../lib/api";
 
 interface PlantDashboardProps {
@@ -21,9 +18,9 @@ interface PlantDashboardProps {
   onAddPlant: () => void;
   onDiagnose: () => void;
   onCalendar: () => void;
-  onWaterPlant: (myPlantId: number) => void;
-  onFertilizePlant: (myPlantId: number) => void;
-  onDeletePlant: (myPlantId: number) => void;
+  onWaterPlant: (myPlantId: number) => Promise<void>;
+  onFertilizePlant: (myPlantId: number) => Promise<void>;
+  onDeletePlant: (myPlantId: number) => Promise<void>;
   onBackToLanding?: () => void;
 }
 
@@ -33,12 +30,6 @@ const DAY_MS = 1000 * 60 * 60 * 24;
 function daysUntil(isoDate: string | null): number | null {
   if (!isoDate) return null;
   return Math.ceil((new Date(isoDate).getTime() - Date.now()) / DAY_MS);
-}
-
-function formatDays(days: number | null): string {
-  if (days === null) return "No schedule";
-  if (days <= 0) return days === 0 ? "Due today" : `${Math.abs(days)}d overdue`;
-  return `in ${days}d`;
 }
 
 export function PlantDashboard({
@@ -52,8 +43,6 @@ export function PlantDashboard({
   onDeletePlant,
   onBackToLanding,
 }: PlantDashboardProps) {
-  const navigate = useNavigate();
-
   const wateringDays = plants.map((p) => daysUntil(p.nextWatering));
   const fertilizingDays = plants.map((p) => daysUntil(p.nextFertilizing));
 
@@ -169,76 +158,15 @@ export function PlantDashboard({
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {plants.map((myPlant) => {
-              const waterIn = daysUntil(myPlant.nextWatering);
-              const fertilizeIn = daysUntil(myPlant.nextFertilizing);
-
-              return (
-                <div
-                  key={myPlant.id}
-                  className="bg-white rounded-2xl shadow-sm overflow-hidden"
-                >
-                  <button
-                    onClick={() => navigate(`/plants/${myPlant.plant.id}`)}
-                    className="block w-full h-48 text-left"
-                  >
-                    <ImageWithFallback
-                      src={myPlant.imageUrl || myPlant.plant.imageUrl}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-
-                  <div className="p-6">
-                    <button
-                      onClick={() => navigate(`/plants/${myPlant.plant.id}`)}
-                      className="text-left"
-                    >
-                      <h3 className="text-xl font-bold hover:text-emerald-600 transition-colors">
-                        {myPlant.plant.commonName}
-                      </h3>
-                      <p className="text-gray-500">
-                        {myPlant.plant.scientificName}
-                      </p>
-                    </button>
-
-                    <div className="mt-4 space-y-2">
-                      <p className={waterIn !== null && waterIn <= 0 ? "text-red-600" : ""}>
-                        💧 Water: {formatDays(waterIn)}
-                      </p>
-                      <p className={fertilizeIn !== null && fertilizeIn <= 0 ? "text-amber-600" : ""}>
-                        🌱 Fertilize: {formatDays(fertilizeIn)}
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2 mt-5">
-                      <button
-                        onClick={() => onWaterPlant(myPlant.id)}
-                        className="flex-1 bg-blue-600 text-white rounded-lg py-2 flex justify-center items-center gap-2"
-                      >
-                        <Droplet size={16} />
-                        Water
-                      </button>
-
-                      <button
-                        onClick={() => onFertilizePlant(myPlant.id)}
-                        className="flex-1 bg-emerald-600 text-white rounded-lg py-2 flex justify-center items-center gap-2"
-                      >
-                        <Sprout size={16} />
-                        Fertilize
-                      </button>
-
-                      <button
-                        onClick={() => onDeletePlant(myPlant.id)}
-                        className="px-3 border rounded-lg"
-                        aria-label="Remove plant"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {plants.map((myPlant) => (
+              <PlantCard
+                key={myPlant.id}
+                myPlant={myPlant}
+                onWater={onWaterPlant}
+                onFertilize={onFertilizePlant}
+                onDelete={onDeletePlant}
+              />
+            ))}
           </div>
         )}
       </div>
