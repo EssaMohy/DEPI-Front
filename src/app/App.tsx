@@ -72,7 +72,7 @@ export default function App() {
                         element={<PlantDetailsPage />}
                       />
                       <Route
-                        path="/articles/details"
+                        path="/articles/:id"
                         element={<ArticleDetailsPage />}
                       />
                       <Route
