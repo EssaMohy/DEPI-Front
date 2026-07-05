@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Heart,
   MessageCircle,
@@ -9,6 +9,10 @@ import {
   Loader2,
   ChevronDown,
   Trash2,
+  Pencil,
+  Check,
+  Grid3X3,
+  UserCircle2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -73,9 +77,9 @@ export default function CommunityPage() {
 
   /* ---- comments state (per post) ---- */
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-  const [commentsMap, setCommentsMap] = useState<
-    Record<number, PostComment[]>
-  >({});
+  const [commentsMap, setCommentsMap] = useState<Record<number, PostComment[]>>(
+    {},
+  );
   const [commentsMetaMap, setCommentsMetaMap] = useState<
     Record<number, CursorMeta>
   >({});
@@ -88,6 +92,16 @@ export default function CommunityPage() {
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
   const [likeCounts, setLikeCounts] = useState<Record<number, number>>({});
 
+  /* ---- tabs: "all" feed vs. "mine" ---- */
+  const [activeTab, setActiveTab] = useState<"all" | "mine">("all");
+
+  /* ---- edit-post state ---- */
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   /* ---------------------------------------------------------------- */
   /* Load posts (initial + load-more)                                  */
   /* ---------------------------------------------------------------- */
@@ -97,9 +111,7 @@ export default function CommunityPage() {
     loadingMore.current = true;
     try {
       const result = await communityApi.list(cursor);
-      setPosts((prev) =>
-        cursor ? [...prev, ...result.data] : result.data,
-      );
+      setPosts((prev) => (cursor ? [...prev, ...result.data] : result.data));
       setMeta(result.meta);
 
       // Seed like counts from API
@@ -285,6 +297,55 @@ export default function CommunityPage() {
   }
 
   /* ---------------------------------------------------------------- */
+  /* Edit post                                                         */
+  /* ---------------------------------------------------------------- */
+
+  function startEditPost(post: CommunityPost) {
+    setEditingPostId(post.id);
+    setEditTitle(post.title === "Untitled" ? "" : post.title);
+    setEditContent(post.content);
+    setEditError(null);
+  }
+
+  function cancelEditPost() {
+    setEditingPostId(null);
+    setEditTitle("");
+    setEditContent("");
+    setEditError(null);
+  }
+
+  async function handleSaveEdit(postId: number) {
+    if (!editContent.trim() && !editTitle.trim()) return;
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      const updated = await communityApi.update(postId, {
+        title: editTitle.trim() || "Untitled",
+        content: editContent.trim(),
+      });
+      setPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, ...updated } : p)),
+      );
+      cancelEditPost();
+    } catch (err) {
+      setEditError(getApiErrorMessage(err, "Could not update post."));
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Tabs: filter posts for "My Posts"                                 */
+  /* ---------------------------------------------------------------- */
+
+  const displayedPosts = useMemo(() => {
+    if (activeTab === "mine") {
+      return user ? posts.filter((p) => p.author.id === user.id) : [];
+    }
+    return posts;
+  }, [activeTab, posts, user]);
+
+  /* ---------------------------------------------------------------- */
   /* Render                                                            */
   /* ---------------------------------------------------------------- */
 
@@ -368,18 +429,64 @@ export default function CommunityPage() {
           </div>
         </div>
 
+        {/* ---- Tabs ---- */}
+        <div className="bg-white rounded-2xl shadow-sm border p-1.5 flex gap-1">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
+              activeTab === "all"
+                ? "bg-emerald-600 text-white"
+                : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            <Grid3X3 size={16} />
+            All Posts
+          </button>
+          <button
+            onClick={() => setActiveTab("mine")}
+            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
+              activeTab === "mine"
+                ? "bg-emerald-600 text-white"
+                : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            <UserCircle2 size={16} />
+            My Posts
+          </button>
+        </div>
+
         {/* ---- Posts Feed ---- */}
-        {posts.length === 0 && (
+        {displayedPosts.length === 0 && (
           <div className="text-center py-20 text-gray-400">
             <Leaf className="mx-auto mb-3 w-12 h-12" />
-            <p className="text-lg font-medium">No posts yet</p>
-            <p className="text-sm">
-              Be the first to share something with the community!
-            </p>
+            {activeTab === "mine" ? (
+              <>
+                <p className="text-lg font-medium">
+                  You haven&apos;t posted anything yet
+                </p>
+                <p className="text-sm">
+                  Share something above and it will show up here.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-medium">No posts yet</p>
+                <p className="text-sm">
+                  Be the first to share something with the community!
+                </p>
+              </>
+            )}
           </div>
         )}
 
-        {posts.map((post) => (
+        {activeTab === "mine" && displayedPosts.length > 0 && meta.hasMore && (
+          <p className="text-xs text-center text-gray-400 -mt-2">
+            Only posts loaded so far are shown here — use &quot;Load more
+            posts&quot; below to check for older ones.
+          </p>
+        )}
+
+        {displayedPosts.map((post) => (
           <div
             key={post.id}
             className="bg-white rounded-3xl shadow-sm border overflow-hidden"
@@ -412,37 +519,96 @@ export default function CommunityPage() {
                   </p>
                 </div>
 
-                {/* Delete button (own posts only) */}
+                {/* Edit / Delete buttons (own posts only) */}
                 {user && post.author.id === user.id && (
-                  <button
-                    onClick={() => handleDeletePost(post.id)}
-                    className="text-gray-400 hover:text-red-500 transition p-2"
-                    title="Delete post"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {editingPostId !== post.id && (
+                      <button
+                        onClick={() => startEditPost(post)}
+                        className="text-gray-400 hover:text-emerald-600 transition p-2"
+                        title="Edit post"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      className="text-gray-400 hover:text-red-500 transition p-2"
+                      title="Delete post"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 )}
               </div>
 
-              {/* Title */}
-              {post.title && post.title !== "Untitled" && (
-                <h4 className="mt-4 text-lg font-semibold text-gray-900">
-                  {post.title}
-                </h4>
-              )}
+              {editingPostId === post.id ? (
+                /* ---- Edit form (replaces title/content while editing) ---- */
+                <div className="mt-4 space-y-3">
+                  {editError && (
+                    <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2">
+                      {editError}
+                    </div>
+                  )}
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Post title…"
+                    className="w-full rounded-xl bg-gray-100 p-3 outline-none text-sm font-medium"
+                  />
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="w-full h-24 rounded-xl bg-gray-100 p-3 outline-none resize-none text-sm"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={cancelEditPost}
+                      disabled={savingEdit}
+                      className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition flex items-center gap-1 disabled:opacity-50"
+                    >
+                      <X size={16} />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSaveEdit(post.id)}
+                      disabled={
+                        savingEdit || (!editTitle.trim() && !editContent.trim())
+                      }
+                      className="px-4 py-2 rounded-xl text-sm bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {savingEdit ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Check size={16} />
+                      )}
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Title */}
+                  {post.title && post.title !== "Untitled" && (
+                    <h4 className="mt-4 text-lg font-semibold text-gray-900">
+                      {post.title}
+                    </h4>
+                  )}
 
-              {/* Content */}
-              <p className="mt-3 text-gray-700 whitespace-pre-wrap">
-                {post.content}
-              </p>
+                  {/* Content */}
+                  <p className="mt-3 text-gray-700 whitespace-pre-wrap">
+                    {post.content}
+                  </p>
 
-              {/* Image */}
-              {post.imageUrl && (
-                <img
-                  src={post.imageUrl}
-                  alt=""
-                  className="mt-5 rounded-2xl w-full max-h-[500px] object-cover"
-                />
+                  {/* Image */}
+                  {post.imageUrl && (
+                    <img
+                      src={post.imageUrl}
+                      alt=""
+                      className="mt-5 rounded-2xl w-full max-h-[500px] object-cover"
+                    />
+                  )}
+                </>
               )}
 
               {/* Actions */}
@@ -453,9 +619,7 @@ export default function CommunityPage() {
                 >
                   <Heart
                     className={
-                      likedPosts.has(post.id)
-                        ? "fill-red-500 text-red-500"
-                        : ""
+                      likedPosts.has(post.id) ? "fill-red-500 text-red-500" : ""
                     }
                   />
                   {likeCounts[post.id] ?? post.likesCount}
@@ -553,8 +717,7 @@ export default function CommunityPage() {
                               navigate(`/profile/${comment.author.id}`)
                             }
                           >
-                            {comment.author.firstName}{" "}
-                            {comment.author.lastName}
+                            {comment.author.firstName} {comment.author.lastName}
                           </b>
                           <span className="text-xs text-gray-400">
                             {timeAgo(comment.createdAt)}
@@ -641,7 +804,11 @@ export default function CommunityPage() {
               <div className="bg-emerald-100 text-emerald-700 p-2 rounded-xl">
                 <MessageCircle size={18} />
               </div>
-              <span>{posts.length} posts loaded</span>
+              <span>
+                {activeTab === "mine"
+                  ? `${displayedPosts.length} of your posts loaded`
+                  : `${posts.length} posts loaded`}
+              </span>
             </div>
           </div>
         </div>
