@@ -13,6 +13,7 @@ import {
   Check,
   Grid3X3,
   UserCircle2,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +25,7 @@ import {
   type PostComment,
   type CursorMeta,
 } from "../../../lib/api";
+import { getFollowingIds, toggleFollowLocal } from "../../../lib/followGraph";
 import {
   Avatar,
   AvatarFallback,
@@ -92,8 +94,30 @@ export default function CommunityPage() {
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set());
   const [likeCounts, setLikeCounts] = useState<Record<number, number>>({});
 
-  /* ---- tabs: "all" feed vs. "mine" ---- */
-  const [activeTab, setActiveTab] = useState<"all" | "mine">("all");
+  /* ---- tabs: "all" feed vs. "mine" vs. "following" ---- */
+  const [activeTab, setActiveTab] = useState<"all" | "mine" | "following">(
+    "all",
+  );
+
+  /* ---- following (client-side follow graph, see lib/followGraph.ts) ---- */
+  const [followingAuthorIds, setFollowingAuthorIds] = useState<Set<number>>(
+    new Set(),
+  );
+
+  useEffect(() => {
+    if (user) setFollowingAuthorIds(getFollowingIds(user.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  function handleToggleFollow(authorId: number) {
+    if (!user || authorId === user.id) return;
+    const nowFollowing = toggleFollowLocal(user.id, authorId);
+    setFollowingAuthorIds((prev) => {
+      const next = new Set(prev);
+      nowFollowing ? next.add(authorId) : next.delete(authorId);
+      return next;
+    });
+  }
 
   /* ---- edit-post state ---- */
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
@@ -342,8 +366,12 @@ export default function CommunityPage() {
     if (activeTab === "mine") {
       return user ? posts.filter((p) => p.author.id === user.id) : [];
     }
+    if (activeTab === "following") {
+      if (!user) return [];
+      return posts.filter((p) => followingAuthorIds.has(p.author.id));
+    }
     return posts;
-  }, [activeTab, posts, user]);
+  }, [activeTab, posts, user, followingAuthorIds]);
 
   /* ---------------------------------------------------------------- */
   /* Render                                                            */
@@ -453,6 +481,17 @@ export default function CommunityPage() {
             <UserCircle2 size={16} />
             My Posts
           </button>
+          <button
+            onClick={() => setActiveTab("following")}
+            className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
+              activeTab === "following"
+                ? "bg-emerald-600 text-white"
+                : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            <Users size={16} />
+            Following
+          </button>
         </div>
 
         {/* ---- Posts Feed ---- */}
@@ -468,6 +507,16 @@ export default function CommunityPage() {
                   Share something above and it will show up here.
                 </p>
               </>
+            ) : activeTab === "following" ? (
+              <>
+                <p className="text-lg font-medium">
+                  You&apos;re not following anyone yet
+                </p>
+                <p className="text-sm">
+                  Visit someone&apos;s profile and hit Follow to see their
+                  posts here.
+                </p>
+              </>
             ) : (
               <>
                 <p className="text-lg font-medium">No posts yet</p>
@@ -479,12 +528,14 @@ export default function CommunityPage() {
           </div>
         )}
 
-        {activeTab === "mine" && displayedPosts.length > 0 && meta.hasMore && (
-          <p className="text-xs text-center text-gray-400 -mt-2">
-            Only posts loaded so far are shown here — use &quot;Load more
-            posts&quot; below to check for older ones.
-          </p>
-        )}
+        {(activeTab === "mine" || activeTab === "following") &&
+          displayedPosts.length > 0 &&
+          meta.hasMore && (
+            <p className="text-xs text-center text-gray-400 -mt-2">
+              Only posts loaded so far are shown here — use &quot;Load more
+              posts&quot; below to check for older ones.
+            </p>
+          )}
 
         {displayedPosts.map((post) => (
           <div
@@ -539,6 +590,30 @@ export default function CommunityPage() {
                       <Trash2 size={18} />
                     </button>
                   </div>
+                )}
+
+                {/* Follow / Unfollow (other users' posts only) */}
+                {user && post.author.id !== user.id && (
+                  <button
+                    onClick={() => handleToggleFollow(post.author.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition shrink-0 ${
+                      followingAuthorIds.has(post.author.id)
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                        : "bg-emerald-600 text-white hover:bg-emerald-700"
+                    }`}
+                  >
+                    {followingAuthorIds.has(post.author.id) ? (
+                      <>
+                        <UserCircle2 size={14} />
+                        Following
+                      </>
+                    ) : (
+                      <>
+                        <Users size={14} />
+                        Follow
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
 
@@ -807,7 +882,9 @@ export default function CommunityPage() {
               <span>
                 {activeTab === "mine"
                   ? `${displayedPosts.length} of your posts loaded`
-                  : `${posts.length} posts loaded`}
+                  : activeTab === "following"
+                    ? `${displayedPosts.length} posts from people you follow`
+                    : `${posts.length} posts loaded`}
               </span>
             </div>
           </div>
