@@ -580,3 +580,133 @@ export const notificationApi = {
       .patch<ApiEnvelope<Record<string, never>>>(`/notifications/${id}/read`)
       .then((res) => res.data.data),
 };
+
+/**
+ * -----------------------------------------------------------------------
+ * Community (Posts) API
+ * -----------------------------------------------------------------------
+ * Backs the Community page. Uses cursor-based pagination (nextCursor /
+ * hasMore) instead of page-based, so it has its own envelope types.
+ */
+export interface PostAuthor {
+  id: number;
+  userName: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+}
+
+export interface CommunityPost {
+  id: number;
+  title: string;
+  content: string;
+  category: string | null;
+  tags: string | null;
+  imageUrl: string | null;
+  published: boolean;
+  author: PostAuthor;
+  commentCount: number;
+  likesCount: number;
+  createdAt: string;
+}
+
+export interface PostComment {
+  id: number;
+  content: string;
+  author: PostAuthor;
+  createdAt: string;
+}
+
+export interface CursorMeta {
+  nextCursor: number | undefined;
+  hasMore: boolean;
+}
+
+interface CursorListEnvelope<T> {
+  success: boolean;
+  message: string;
+  data: T[];
+  meta: CursorMeta;
+  timestamp: string;
+}
+
+export interface CreatePostPayload {
+  title: string;
+  content: string;
+  category?: string;
+  tags?: string;
+  published?: boolean;
+}
+
+export const communityApi = {
+  /** List published posts (cursor-based, newest first). */
+  list: (cursor?: number, limit = 20) =>
+    api
+      .get<CursorListEnvelope<CommunityPost>>("/posts", {
+        params: { ...(cursor ? { cursor } : {}), limit },
+      })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  /** Get a single post by id. */
+  getById: (id: number) =>
+    api
+      .get<ApiEnvelope<CommunityPost>>(`/posts/${id}`)
+      .then((res) => res.data.data),
+
+  /** Create a new post. */
+  create: (payload: CreatePostPayload) =>
+    api
+      .post<ApiEnvelope<CommunityPost>>("/posts", payload)
+      .then((res) => res.data.data),
+
+  /** Update a post. */
+  update: (id: number, payload: Partial<CreatePostPayload>) =>
+    api
+      .patch<ApiEnvelope<CommunityPost>>(`/posts/${id}`, payload)
+      .then((res) => res.data.data),
+
+  /** Delete a post. */
+  delete: (id: number) =>
+    api
+      .delete<ApiEnvelope<Record<string, never>>>(`/posts/${id}`)
+      .then((res) => res.data.data),
+
+  /** Upload an image to a post. */
+  uploadImage: (postId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api
+      .post<ApiEnvelope<CommunityPost>>(`/posts/${postId}/image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((res) => res.data.data);
+  },
+
+  /** List comments on a post (cursor-based). */
+  listComments: (postId: number, cursor?: number, limit = 20) =>
+    api
+      .get<CursorListEnvelope<PostComment>>(`/posts/${postId}/comments`, {
+        params: { ...(cursor ? { cursor } : {}), limit },
+      })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  /** Add a comment to a post. */
+  createComment: (postId: number, content: string) =>
+    api
+      .post<ApiEnvelope<PostComment>>(`/posts/${postId}/comments`, { content })
+      .then((res) => res.data.data),
+
+  /** Delete a comment. */
+  deleteComment: (commentId: number) =>
+    api
+      .delete<ApiEnvelope<Record<string, never>>>(
+        `/posts/comments/${commentId}`,
+      )
+      .then((res) => res.data.data),
+
+  /** Toggle like on a post. Returns { liked: boolean }. */
+  toggleLike: (postId: number) =>
+    api
+      .post<ApiEnvelope<{ liked: boolean }>>(`/posts/${postId}/like`)
+      .then((res) => res.data.data),
+};
