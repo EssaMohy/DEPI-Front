@@ -31,6 +31,8 @@ interface PlantContextValue {
   fertilizePlant: (myPlantId: number) => Promise<void>;
   /** Remove a plant (by its MyPlant id) from the collection. */
   deletePlant: (myPlantId: number) => Promise<void>;
+  /** Update the photo for a plant (by its MyPlant id). */
+  updatePlantImage: (myPlantId: number, imageFile: File) => Promise<void>;
 }
 
 const PlantContext = createContext<PlantContextValue | null>(null);
@@ -111,6 +113,13 @@ export function PlantProvider({ children }: { children: ReactNode }) {
     [adjustCounts],
   );
 
+  const updatePlantImage = useCallback(async (myPlantId: number, imageFile: File) => {
+    const updated = await myPlantApi.updateImage(myPlantId, imageFile);
+    setPlants((prev) =>
+      prev.map((p) => (p.id === myPlantId ? updated : p)),
+    );
+  }, []);
+
   return (
     <PlantContext.Provider
       value={{
@@ -122,6 +131,7 @@ export function PlantProvider({ children }: { children: ReactNode }) {
         waterPlant,
         fertilizePlant,
         deletePlant,
+        updatePlantImage,
       }}
     >
       {children}

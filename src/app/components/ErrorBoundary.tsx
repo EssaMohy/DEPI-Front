@@ -58,13 +58,11 @@ export class ErrorBoundary extends Component<
             screen.
           </p>
 
-          {isDev && (
-            <pre className="mt-5 text-left text-xs bg-gray-100 rounded-xl p-4 overflow-auto max-h-64 text-red-700 whitespace-pre-wrap">
-              {error.message}
-              {"\n\n"}
-              {error.stack}
-            </pre>
-          )}
+          <pre className="mt-5 text-left text-xs bg-gray-100 rounded-xl p-4 overflow-auto max-h-64 text-red-700 whitespace-pre-wrap">
+            {error.message}
+            {"\n\n"}
+            {error.stack}
+          </pre>
 
           <button
             onClick={this.handleReload}

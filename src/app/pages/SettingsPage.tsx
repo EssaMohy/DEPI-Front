@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   Bell,
   Droplets,
@@ -12,210 +12,128 @@ import {
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
+import { profileApi, type NotificationPreferences } from "@/lib/api";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
 
-  const [settings, setSettings] = useState({
-    water: true,
+  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    fertilize: true,
+  useEffect(() => {
+    profileApi
+      .getNotificationPreferences()
+      .then(setPrefs)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-    disease: true,
-
-    dark: false,
-  });
-
-  const toggle = (key: string) => {
-    setSettings({
-      ...settings,
-
-      [key]: !settings[key as keyof typeof settings],
-    });
-  };
+  const updatePref = useCallback(
+    (key: keyof NotificationPreferences) => {
+      if (!prefs) return;
+      const updated = { ...prefs, [key]: !prefs[key] };
+      setPrefs(updated);
+      profileApi.updateNotificationPreferences({ [key]: updated[key] }).catch(() => {
+        setPrefs(prefs);
+      });
+    },
+    [prefs]
+  );
 
   return (
-    <div
-      className="
-min-h-screen
-bg-gray-50
-p-6
-"
-    >
-      <div
-        className="
-max-w-3xl
-mx-auto
-space-y-6
-"
-      >
-        {/* Header */}
-
-        <div
-          className="
-flex
-items-center
-gap-3
-"
-        >
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="
-p-2
-rounded-full
-hover:bg-gray-200
-"
+            className="p-2 rounded-full hover:bg-gray-200"
           >
             <ChevronLeft />
           </button>
-
           <div>
-            <h1
-              className="
-text-3xl
-font-bold
-"
-            >
-              Settings
-            </h1>
-
-            <p
-              className="
-text-gray-600
-"
-            >
-              Manage your Plantera experience
-            </p>
+            <h1 className="text-3xl font-bold">Settings</h1>
+            <p className="text-gray-600">Manage your Plantera experience</p>
           </div>
         </div>
 
-        {/* Notifications */}
+        {loading ? (
+          <div className="bg-white rounded-3xl p-6 shadow-sm text-center text-gray-400">
+            Loading settings...
+          </div>
+        ) : (
+          <>
+            <div className="bg-white rounded-3xl p-6 shadow-sm">
+              <h2 className="text-xl font-bold mb-5">Notifications</h2>
 
-        <div
-          className="
-bg-white
-rounded-3xl
-p-6
-shadow-sm
-"
-        >
-          <h2
-            className="
-text-xl
-font-bold
-mb-5
-"
-          >
-            Notifications
-          </h2>
+              <SettingItem
+                icon={<Bell />}
+                title="Push Notifications"
+                description="Receive notifications on this device"
+                enabled={prefs?.pushEnabled ?? true}
+                onClick={() => updatePref("pushEnabled")}
+              />
 
-          <SettingItem
-            icon={<Droplets />}
-            title="Water Reminders"
-            description="Get notified when plants need watering"
-            enabled={settings.water}
-            onClick={() => toggle("water")}
-          />
+              <SettingItem
+                icon={<Droplets />}
+                title="Water Reminders"
+                description="Get notified when plants need watering"
+                enabled={prefs?.wateringReminders ?? true}
+                onClick={() => updatePref("wateringReminders")}
+              />
 
-          <SettingItem
-            icon={<Sprout />}
-            title="Fertilizing Reminders"
-            description="Receive fertilizer schedules"
-            enabled={settings.fertilize}
-            onClick={() => toggle("fertilize")}
-          />
+              <SettingItem
+                icon={<Sprout />}
+                title="Fertilizing Reminders"
+                description="Receive fertilizer schedules"
+                enabled={prefs?.fertilizingReminders ?? true}
+                onClick={() => updatePref("fertilizingReminders")}
+              />
 
-          <SettingItem
-            icon={<Bug />}
-            title="Disease Alerts"
-            description="Get alerts after AI diagnosis"
-            enabled={settings.disease}
-            onClick={() => toggle("disease")}
-          />
-        </div>
+              <SettingItem
+                icon={<Bug />}
+                title="Disease Alerts"
+                description="Get alerts after AI diagnosis"
+                enabled={prefs?.pushEnabled ?? true}
+                onClick={() => updatePref("pushEnabled")}
+              />
 
-        {/* Appearance */}
+              <SettingItem
+                icon={<Bell />}
+                title="Email Notifications"
+                description="Receive notification emails"
+                enabled={prefs?.emailNotifications ?? true}
+                onClick={() => updatePref("emailNotifications")}
+              />
+            </div>
+          </>
+        )}
 
-        <div
-          className="
-bg-white
-rounded-3xl
-p-6
-shadow-sm
-"
-        >
-          <h2
-            className="
-text-xl
-font-bold
-mb-5
-"
-          >
-            Appearance
-          </h2>
+        <div className="bg-white rounded-3xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold mb-5">Appearance</h2>
 
           <SettingItem
             icon={<Moon />}
             title="Dark Mode"
             description="Change application theme"
-            enabled={settings.dark}
-            onClick={() => toggle("dark")}
+            enabled={false}
+            onClick={() => {}}
           />
         </div>
 
-        {/* Other */}
-
-        <div
-          className="
-bg-white
-rounded-3xl
-p-6
-shadow-sm
-space-y-3
-"
-        >
-          <button
-            className="
-w-full
-flex
-items-center
-gap-3
-p-4
-rounded-xl
-hover:bg-gray-100
-"
-          >
+        <div className="bg-white rounded-3xl p-6 shadow-sm space-y-3">
+          <button className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-gray-100">
             <Globe />
             Language
           </button>
 
-          <button
-            className="
-w-full
-flex
-items-center
-gap-3
-p-4
-rounded-xl
-hover:bg-gray-100
-"
-          >
+          <button className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-gray-100">
             <Shield />
             Privacy
           </button>
 
           <button
             onClick={() => navigate("/login")}
-            className="
-w-full
-flex
-items-center
-gap-3
-p-4
-rounded-xl
-text-red-600
-hover:bg-red-50
-"
+            className="w-full flex items-center gap-3 p-4 rounded-xl text-red-600 hover:bg-red-50"
           >
             <LogOut />
             Logout
@@ -228,92 +146,39 @@ hover:bg-red-50
 
 function SettingItem({
   icon,
-
   title,
-
   description,
-
   enabled,
-
   onClick,
-}: any) {
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  enabled: boolean;
+  onClick: () => void;
+}) {
   return (
-    <div
-      className="
-flex
-items-center
-justify-between
-py-4
-border-b
-last:border-none
-"
-    >
-      <div
-        className="
-flex
-items-center
-gap-4
-"
-      >
-        <div
-          className="
-bg-emerald-100
-text-emerald-700
-p-3
-rounded-xl
-"
-        >
+    <div className="flex items-center justify-between py-4 border-b last:border-none">
+      <div className="flex items-center gap-4">
+        <div className="bg-emerald-100 text-emerald-700 p-3 rounded-xl">
           {icon}
         </div>
-
         <div>
-          <h3
-            className="
-font-semibold
-"
-          >
-            {title}
-          </h3>
-
-          <p
-            className="
-text-sm
-text-gray-500
-"
-          >
-            {description}
-          </p>
+          <h3 className="font-semibold">{title}</h3>
+          <p className="text-sm text-gray-500">{description}</p>
         </div>
       </div>
 
       <button
         onClick={onClick}
-        className={`
-
-w-12
-h-6
-rounded-full
-transition
-relative
-
-${enabled ? "bg-emerald-600" : "bg-gray-300"}
-
-`}
+        className={`w-12 h-6 rounded-full transition relative ${
+          enabled ? "bg-emerald-600" : "bg-gray-300"
+        }`}
       >
         <span
-          className={`
-
-absolute
-top-1
-w-4
-h-4
-bg-white
-rounded-full
-transition
-
-${enabled ? "right-1" : "left-1"}
-
-`}
+          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition ${
+            enabled ? "right-1" : "left-1"
+          }`}
         />
       </button>
     </div>

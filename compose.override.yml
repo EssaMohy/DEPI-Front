@@ -1,0 +1,12 @@
+services:
+  web:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:8001/api/v1
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    ports:
+      - "3002:3000"

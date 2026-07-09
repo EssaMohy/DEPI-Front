@@ -350,6 +350,16 @@ export const profileApi = {
       })
       .then((res) => res.data.data.user);
   },
+
+  getNotificationPreferences: () =>
+    api
+      .get<ApiEnvelope<{ preferences: NotificationPreferences }>>("/profile/notifications")
+      .then((res) => res.data.data.preferences),
+
+  updateNotificationPreferences: (prefs: Partial<NotificationPreferences>) =>
+    api
+      .patch<ApiEnvelope<{ preferences: NotificationPreferences }>>("/profile/notifications", prefs)
+      .then((res) => res.data.data.preferences),
 };
 
 /**
@@ -437,6 +447,23 @@ export interface MyPlant {
   createdAt: string;
 }
 
+export interface IdentifySuggestion {
+  classId: string;
+  className: string;
+  confidence: number;
+  plantId: number | null;
+  plantName: string;
+  imageUrl: string | null;
+  predictionIndex: number;
+}
+
+export interface NotificationPreferences {
+  pushEnabled: boolean;
+  wateringReminders: boolean;
+  fertilizingReminders: boolean;
+  emailNotifications: boolean;
+}
+
 export interface MyPlantListParams {
   page?: number;
   limit?: number;
@@ -469,6 +496,36 @@ export const myPlantApi = {
         `/my-plants/${myPlantId}/fertilize`,
       )
       .then((res) => res.data.data.myPlant),
+
+  identify: (imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api
+      .post<ApiEnvelope<{
+        recordId: number;
+        status: 'cannot_identify' | 'suggestions';
+        imageUrl: string;
+        suggestions: IdentifySuggestion[];
+      }>>('/my-plants/identify', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data.data);
+  },
+
+  confirmIdentify: (recordId: number, predictionIndex: number) =>
+    api
+      .post<ApiEnvelope<{ myPlant: MyPlant }>>('/my-plants/identify/confirm', { recordId, predictionIndex })
+      .then((res) => res.data.data.myPlant),
+
+  updateImage: (myPlantId: number, imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api
+      .patch<ApiEnvelope<{ myPlant: MyPlant }>>(`/my-plants/${myPlantId}/image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data.data.myPlant);
+  },
 };
 
 /**
@@ -578,6 +635,101 @@ export const notificationApi = {
   markAsRead: (id: number) =>
     api
       .patch<ApiEnvelope<Record<string, never>>>(`/notifications/${id}/read`)
+      .then((res) => res.data.data),
+};
+
+export interface DiagnosticDetection {
+  name: string;
+  otherNames: string[];
+  type: string[];
+  causes: string[];
+  symptoms: string[];
+  treatment: {
+    steps: string[];
+  } | null;
+  description: string;
+  imageUrl: string | null;
+  instances: Array<{
+    bbox: [number, number, number, number];
+    confidence: number;
+  }>;
+}
+
+export interface DiagnosticResult {
+  image: string;
+  detections: DiagnosticDetection[];
+}
+
+export interface DiagnosticRecord {
+  id: number;
+  type: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  imageUrl: string | null;
+  result: DiagnosticResult | null;
+  error: string | null;
+  plantId: number | null;
+  myPlantId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiagnosticListParams {
+  page?: number;
+  limit?: number;
+}
+
+export const diagnosticApi = {
+  diagnose: (imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api
+      .post<ApiEnvelope<DiagnosticResult>>('/diagnostics', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data.data);
+  },
+
+  list: (params: DiagnosticListParams = {}) =>
+    api
+      .get<ApiListEnvelope<DiagnosticRecord>>('/diagnostics', { params })
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
+
+  getById: (id: number) =>
+    api
+      .get<ApiEnvelope<DiagnosticRecord>>(`/diagnostics/${id}`)
+      .then((res) => res.data.data),
+};
+
+export interface Article {
+  id: number;
+  title: string;
+  content: string;
+  excerpt: string | null;
+  category: string | null;
+  imageUrl: string | null;
+  published: boolean;
+  author: {
+    id: number;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  };
+  createdAt: string;
+}
+
+export const articlesApi = {
+  list: (params: { page?: number; limit?: number } = {}) =>
+    api
+      .get<ApiListEnvelope<Article>>('/articles', { params })
+      .then((res) => ({
+        data: res.data.data,
+        meta: res.data.meta,
+      })),
+
+  getById: (id: number) =>
+    api
+      .get<ApiEnvelope<Article>>(`/articles/${id}`)
       .then((res) => res.data.data),
 };
 

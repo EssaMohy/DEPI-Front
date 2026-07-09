@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Thermometer,
@@ -12,11 +12,14 @@ import {
 } from "lucide-react";
 
 import { plantApi, getApiErrorMessage, type CatalogPlant } from "../../lib/api";
+import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { usePlants } from "../context/PlantContext";
 
 export default function PlantDetailsPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const myPlantImageUrl = (location.state as { myPlantImageUrl?: string } | null)?.myPlantImageUrl;
   const { plants, addPlant } = usePlants();
 
   const [plant, setPlant] = useState<CatalogPlant | null>(null);
@@ -109,8 +112,8 @@ export default function PlantDetailsPage() {
         {/* LEFT SIDE */}
         <div className="p-8 flex flex-col items-center justify-center text-black">
           <div className="w-full h-[500px] rounded-3xl overflow-hidden shadow-2xl">
-            <img
-              src={plant.imageUrl}
+            <ImageWithFallback
+              src={myPlantImageUrl || plant.imageUrl}
               alt={plant.commonName}
               className="w-full h-full object-cover"
             />
