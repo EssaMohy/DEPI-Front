@@ -16,7 +16,7 @@ import axios, {
 const env = (import.meta as unknown as { env?: Record<string, string> }).env;
 
 export const API_BASE_URL =
-  env?.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
+  env?.VITE_API_URL ?? env?.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 /**
  * -----------------------------------------------------------------------
@@ -125,22 +125,75 @@ export function registerUnauthorizedHandler(handler: UnauthorizedHandler) {
   unauthorizedHandler = handler;
 }
 
+let isRefreshing = false;
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onRefreshComplete(newToken: string) {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     const status = error.response?.status;
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
     const requestHadToken = Boolean(
       (error.config?.headers as Record<string, unknown> | undefined)?.[
         "Authorization"
       ],
     );
 
-    if (status === 401 && requestHadToken) {
-      clearSession();
-      if (unauthorizedHandler) {
-        unauthorizedHandler();
-      } else if (typeof window !== "undefined") {
-        window.location.href = "/auth/login";
+    if (status === 401 && requestHadToken && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((newToken: string) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        clearSession();
+        if (unauthorizedHandler) {
+          unauthorizedHandler();
+        } else if (typeof window !== "undefined") {
+          window.location.href = "/auth/login";
+        }
+        return Promise.reject(error);
+      }
+
+      try {
+        const tokens = await authApi.refreshToken(refreshToken);
+        setSession(tokens.accessToken, tokens.refreshToken, getStoredUser()!);
+        onRefreshComplete(tokens.accessToken);
+
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+        }
+        return api(originalRequest);
+      } catch {
+        clearSession();
+        if (unauthorizedHandler) {
+          unauthorizedHandler();
+        } else if (typeof window !== "undefined") {
+          window.location.href = "/auth/login";
+        }
+        return Promise.reject(error);
+      } finally {
+        isRefreshing = false;
       }
     }
 
@@ -281,6 +334,13 @@ export const authApi = {
       const { user } = res.data.data;
       return normalizeProfileToUser(user);
     }),
+
+  refreshToken: (refreshToken: string) =>
+    api
+      .post<ApiEnvelope<{ accessToken: string; refreshToken: string }>>("/auth/refresh", {
+        refreshToken,
+      })
+      .then((res) => res.data.data),
 };
 
 /**
@@ -341,6 +401,21 @@ export const profileApi = {
       .patch<ApiEnvelope<Record<string, never>>>("/profile/password", payload)
       .then((res) => res.data.data),
 
+  getNotificationPreferences: () =>
+    api
+      .get<ApiEnvelope<{ preferences: NotificationPreferences }>>(
+        "/profile/notifications"
+      )
+      .then((res) => res.data.data.preferences),
+
+  updateNotificationPreferences: (payload: Partial<NotificationPreferences>) =>
+    api
+      .patch<ApiEnvelope<{ preferences: NotificationPreferences }>>(
+        "/profile/notifications",
+        payload
+      )
+      .then((res) => res.data.data.preferences),
+
   updateAvatar: (file: File) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -350,16 +425,6 @@ export const profileApi = {
       })
       .then((res) => res.data.data.user);
   },
-
-  getNotificationPreferences: () =>
-    api
-      .get<ApiEnvelope<{ preferences: NotificationPreferences }>>("/profile/notifications")
-      .then((res) => res.data.data.preferences),
-
-  updateNotificationPreferences: (prefs: Partial<NotificationPreferences>) =>
-    api
-      .patch<ApiEnvelope<{ preferences: NotificationPreferences }>>("/profile/notifications", prefs)
-      .then((res) => res.data.data.preferences),
 };
 
 /**
@@ -423,6 +488,30 @@ export const plantApi = {
     api
       .get<ApiEnvelope<CatalogPlant>>(`/plants/${id}`)
       .then((res) => res.data.data),
+
+  classify: (imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api
+      .post<ApiEnvelope<{ recordId: number; status: string }>>(
+        '/plants/classify',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      .then((res) => res.data.data);
+  },
+
+  diagnose: (imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api
+      .post<ApiEnvelope<{ recordId: number; status: string }>>(
+        '/plants/diagnose',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      .then((res) => res.data.data);
+  },
 };
 
 /**
@@ -448,20 +537,20 @@ export interface MyPlant {
 }
 
 export interface IdentifySuggestion {
-  classId: string;
+  classId: number;
   className: string;
   confidence: number;
   plantId: number | null;
   plantName: string;
   imageUrl: string | null;
-  predictionIndex: number;
 }
 
-export interface NotificationPreferences {
-  pushEnabled: boolean;
-  wateringReminders: boolean;
-  fertilizingReminders: boolean;
-  emailNotifications: boolean;
+export interface IdentifyResult {
+  recordId: number;
+  status: 'identified' | 'suggestions' | 'cannot_identify';
+  imageUrl: string;
+  myPlant?: MyPlant;
+  suggestions: IdentifySuggestion[];
 }
 
 export interface MyPlantListParams {
@@ -501,29 +590,51 @@ export const myPlantApi = {
     const formData = new FormData();
     formData.append('image', imageFile);
     return api
-      .post<ApiEnvelope<{
-        recordId: number;
-        status: 'cannot_identify' | 'suggestions';
-        imageUrl: string;
-        suggestions: IdentifySuggestion[];
-      }>>('/my-plants/identify', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      .post<ApiEnvelope<IdentifyResult>>(
+        '/my-plants/identify',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
       .then((res) => res.data.data);
   },
 
   confirmIdentify: (recordId: number, predictionIndex: number) =>
     api
-      .post<ApiEnvelope<{ myPlant: MyPlant }>>('/my-plants/identify/confirm', { recordId, predictionIndex })
+      .post<ApiEnvelope<{ myPlant: MyPlant }>>('/my-plants/identify/confirm', {
+        recordId,
+        predictionIndex,
+      })
       .then((res) => res.data.data.myPlant),
+
+  diagnose: (myPlantId: number, imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api
+      .post<ApiEnvelope<{ recordId: number; status: string }>>(
+        `/my-plants/${myPlantId}/diagnose`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      .then((res) => res.data.data);
+  },
+
+  getDiagnoses: (myPlantId: number, params: { page?: number; limit?: number } = {}) =>
+    api
+      .get<ApiListEnvelope<DiagnosticRecord>>(
+        `/my-plants/${myPlantId}/diagnoses`,
+        { params },
+      )
+      .then((res) => ({ data: res.data.data, meta: res.data.meta })),
 
   updateImage: (myPlantId: number, imageFile: File) => {
     const formData = new FormData();
     formData.append('image', imageFile);
     return api
-      .patch<ApiEnvelope<{ myPlant: MyPlant }>>(`/my-plants/${myPlantId}/image`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      .patch<ApiEnvelope<{ myPlant: MyPlant }>>(
+        `/my-plants/${myPlantId}/image`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
       .then((res) => res.data.data.myPlant);
   },
 };
@@ -619,6 +730,13 @@ export interface Notification {
   plantId: number | null;
   scheduledTime: string | null;
   createdAt: string;
+}
+
+export interface NotificationPreferences {
+  pushEnabled: boolean;
+  wateringReminders: boolean;
+  fertilizingReminders: boolean;
+  emailNotifications: boolean;
 }
 
 export interface NotificationListParams {
@@ -735,20 +853,10 @@ export const articlesApi = {
 
 /**
  * -----------------------------------------------------------------------
- * Community (Posts) API
+ * Community Posts API
  * -----------------------------------------------------------------------
- * Backs the Community page. Uses cursor-based pagination (nextCursor /
- * hasMore) instead of page-based, so it has its own envelope types.
  */
-export interface PostAuthor {
-  id: number;
-  userName: string;
-  firstName: string;
-  lastName: string;
-  avatarUrl: string | null;
-}
-
-export interface CommunityPost {
+export interface Post {
   id: number;
   title: string;
   content: string;
@@ -756,109 +864,64 @@ export interface CommunityPost {
   tags: string | null;
   imageUrl: string | null;
   published: boolean;
-  author: PostAuthor;
+  author: {
+    id: number;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  };
   commentCount: number;
   likesCount: number;
+  liked: boolean;
   createdAt: string;
 }
 
-export interface PostComment {
-  id: number;
-  content: string;
-  author: PostAuthor;
-  createdAt: string;
-}
-
-export interface CursorMeta {
-  nextCursor: number | undefined;
-  hasMore: boolean;
-}
-
-interface CursorListEnvelope<T> {
-  success: boolean;
-  message: string;
-  data: T[];
-  meta: CursorMeta;
-  timestamp: string;
-}
-
-export interface CreatePostPayload {
-  title: string;
-  content: string;
-  category?: string;
-  tags?: string;
-  published?: boolean;
+export interface PostListParams {
+  cursor?: number;
+  limit?: number;
 }
 
 export const communityApi = {
-  /** List published posts (cursor-based, newest first). */
-  list: (cursor?: number, limit = 20) =>
+  list: (params: PostListParams = {}) =>
     api
-      .get<CursorListEnvelope<CommunityPost>>("/posts", {
-        params: { ...(cursor ? { cursor } : {}), limit },
-      })
+      .get<ApiListEnvelope<Post>>('/posts', { params })
       .then((res) => ({ data: res.data.data, meta: res.data.meta })),
 
-  /** Get a single post by id. */
   getById: (id: number) =>
-    api
-      .get<ApiEnvelope<CommunityPost>>(`/posts/${id}`)
-      .then((res) => res.data.data),
+    api.get<ApiEnvelope<Post>>(`/posts/${id}`).then((res) => res.data.data),
 
-  /** Create a new post. */
-  create: (payload: CreatePostPayload) =>
-    api
-      .post<ApiEnvelope<CommunityPost>>("/posts", payload)
-      .then((res) => res.data.data),
-
-  /** Update a post. */
-  update: (id: number, payload: Partial<CreatePostPayload>) =>
-    api
-      .patch<ApiEnvelope<CommunityPost>>(`/posts/${id}`, payload)
-      .then((res) => res.data.data),
-
-  /** Delete a post. */
-  delete: (id: number) =>
-    api
-      .delete<ApiEnvelope<Record<string, never>>>(`/posts/${id}`)
-      .then((res) => res.data.data),
-
-  /** Upload an image to a post. */
-  uploadImage: (postId: number, file: File) => {
+  create: (data: { title: string; content: string; category?: string; tags?: string }, imageFile?: File) => {
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append('title', data.title);
+    formData.append('content', data.content);
+    if (data.category) formData.append('category', data.category);
+    if (data.tags) formData.append('tags', data.tags);
+    if (imageFile) formData.append('image', imageFile);
+
     return api
-      .post<ApiEnvelope<CommunityPost>>(`/posts/${postId}/image`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      .post<ApiEnvelope<Post>>('/posts', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       })
       .then((res) => res.data.data);
   },
 
-  /** List comments on a post (cursor-based). */
-  listComments: (postId: number, cursor?: number, limit = 20) =>
+  delete: (id: number) =>
+    api.delete<ApiEnvelope<Record<string, never>>>(`/posts/${id}`).then((res) => res.data.data),
+
+  like: (postId: number) =>
+    api.post<ApiEnvelope<{ liked: boolean; likesCount: number }>>(`/posts/${postId}/like`).then((res) => res.data.data),
+
+  getLikes: (postId: number) =>
+    api.get<ApiListEnvelope<{ id: number; userName: string }>>(`/posts/${postId}/likes`).then((res) => res.data.data),
+
+  addComment: (postId: number, content: string) =>
     api
-      .get<CursorListEnvelope<PostComment>>(`/posts/${postId}/comments`, {
-        params: { ...(cursor ? { cursor } : {}), limit },
-      })
+      .post<ApiEnvelope<unknown>>(`/posts/${postId}/comments`, { content })
+      .then((res) => res.data.data),
+
+  getComments: (postId: number, params: { cursor?: number; limit?: number } = {}) =>
+    api
+      .get<ApiListEnvelope<unknown>>(`/posts/${postId}/comments`, { params })
       .then((res) => ({ data: res.data.data, meta: res.data.meta })),
-
-  /** Add a comment to a post. */
-  createComment: (postId: number, content: string) =>
-    api
-      .post<ApiEnvelope<PostComment>>(`/posts/${postId}/comments`, { content })
-      .then((res) => res.data.data),
-
-  /** Delete a comment. */
-  deleteComment: (commentId: number) =>
-    api
-      .delete<ApiEnvelope<Record<string, never>>>(
-        `/posts/comments/${commentId}`,
-      )
-      .then((res) => res.data.data),
-
-  /** Toggle like on a post. Returns { liked: boolean }. */
-  toggleLike: (postId: number) =>
-    api
-      .post<ApiEnvelope<{ liked: boolean }>>(`/posts/${postId}/like`)
-      .then((res) => res.data.data),
 };

@@ -1,16 +1,51 @@
-import { useState } from "react";
-import { Search, BookOpen, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, BookOpen, ArrowRight, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { articlesApi, getApiErrorMessage } from "../../lib/api";
 
-import { ARTICLES } from "../../data/articles";
+interface Article {
+  id: number;
+  title: string;
+  content: string;
+  excerpt: string | null;
+  category: string | null;
+  imageUrl: string | null;
+  published: boolean;
+  author: {
+    id: number;
+    userName: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  };
+  createdAt: string;
+}
 
 export default function ArticlesPage() {
   const navigate = useNavigate();
 
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const filtered = ARTICLES.filter((article) =>
-    article.title.toLowerCase().includes(search.toLowerCase()),
+  useEffect(() => {
+    articlesApi
+      .list({ limit: 50 })
+      .then((result) => {
+        setArticles(result.data);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(getApiErrorMessage(err, "Could not load articles."));
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  const filtered = articles.filter((article) =>
+    article.title.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -77,14 +112,17 @@ focus:ring-emerald-500
         />
       </div>
 
-      {/* Cards */}
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border">
-          <BookOpen className="mx-auto text-gray-300 w-16 h-16 mb-4" />
-          <p className="text-gray-500">No articles match "{search}"</p>
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader className="w-8 h-8 text-emerald-600 animate-spin" />
+        </div>
+      ) : error ? (
+        <div className="bg-white rounded-3xl shadow p-6 border text-center">
+          <p className="text-red-600">{error}</p>
         </div>
       ) : (
+        /* Cards */
         <div
           className="
 grid
@@ -112,9 +150,11 @@ h-52
 overflow-hidden
 "
               >
-                <img
-                  src={article.image}
-                  className="
+                {article.imageUrl ? (
+                  <img
+                    src={article.imageUrl}
+                    alt={article.title}
+                    className="
 w-full
 h-full
 object-cover
@@ -122,7 +162,12 @@ group-hover:scale-110
 transition
 duration-500
 "
-                />
+                  />
+                ) : (
+                  <div className="w-full h-full bg-emerald-100 flex items-center justify-center">
+                    <BookOpen size={48} className="text-emerald-400" />
+                  </div>
+                )}
               </div>
 
               <div className="p-5">
@@ -137,7 +182,7 @@ text-xs
 font-semibold
 "
                 >
-                  {article.category}
+                  {article.category || "General"}
                 </span>
 
                 <h2
@@ -151,7 +196,11 @@ mt-4
                 </h2>
 
                 <button
-                  onClick={() => navigate(`/articles/${article.id}`)}
+                  onClick={() =>
+                    navigate("/articles/details", {
+                      state: { article },
+                    })
+                  }
                   className="
 mt-5
 flex
@@ -167,6 +216,12 @@ font-semibold
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!isLoading && filtered.length === 0 && !error && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No articles found.</p>
         </div>
       )}
     </div>
